@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ── Core Models ───────────────────────────────────────────────────────────────
+
+model User {
+  id                    String                @id @default(uuid())
+  name                  String
+  email                 String                @unique
+  passwordHash          String
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  roomsOwned            Room[]                @relation("RoomOwner")
+  roomMemberships       RoomMember[]
+  expensesCreated       Expense[]             @relation("ExpenseCreator")
+  expensesPaid          Expense[]             @relation("ExpensePayer")
+  expenseParticipations ExpenseParticipant[]
+  resetTokens           PasswordResetToken[]
+  guestsCreated         GuestMember[]         @relation("GuestCreator")
+  guestsClaimed         GuestMember[]         @relation("GuestClaimer")
+  paymentsFrom          Payment[]             @relation("PaymentFromUser")
+  paymentsTo            Payment[]             @relation("PaymentToUser")
+  paymentsCreated       Payment[]             @relation("PaymentCreator")
+  plansCreated          Plan[]                @relation("PlanCreator")
+  planParticipations    PlanParticipant[]
+  budgets               Budget[]
+  financialProfile      FinancialProfile?
+}
+
+model Room {
+  id        String     @id @default(uuid())
+  name      String
+  code      String     @unique
+  ownerId   String
+  owner     User       @relation("RoomOwner", fields: [ownerId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  members      RoomMember[]
+  expenses     Expense[]
+  guestMembers GuestMember[]
+  payments     Payment[]
+  plans        Plan[]
+  budgets      Budget[]
+}
+
+model RoomMember {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  role      String   @default("member")  // "owner" | "member"
+  status    String   @default("pending") // "pending" | "approved" | "rejected"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  claimGuestMemberId String?
+  claimGuestMember   GuestMember? @relation(fields: [claimGuestMemberId], references: [id])
+  room               Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model Expense {
+  id                  String   @id @default(uuid())
+  roomId              String
+  title               String
+  amount              Float
+  category            String   @default("other")
+  note                String?
+  splitType           String   @default("equal") // "equal" | "exact" | "percentage"
+  paidByUserId        String?
+  paidByGuestMemberId String?
+  createdByUserId     String
+  date                DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  room          Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  paidByUser    User?        @relation("ExpensePayer", fields: [paidByUserId], references: [id])
+  paidByGuest   GuestMember? @relation("ExpenseGuestPayer", fields: [paidByGuestMemberId], references: [id])
+  createdByUser User         @relation("ExpenseCreator", fields: [createdByUserId], references: [id])
+  participants  ExpenseParticipant[]
+}
+
+model ExpenseParticipant {
+  id            String   @id @default(uuid())
+  expenseId     String
+  userId        String?
+  guestMemberId String?
+  shareAmount   Float    // canonical resolved share — always absolute VND
+
+  expense     Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestMember GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GuestMember {
+  id              String    @id @default(uuid())
+  roomId          String
+  displayName     String
+  email           String?
+  createdByUserId String
+  claimedByUserId String?
+  claimedAt       DateTime?
+  status          String    @default("active") // "active" | "claimed" | "removed"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  room          Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdByUser User         @relation("GuestCreator", fields: [createdByUserId], references: [id])
+  claimedByUser User?        @relation("GuestClaimer", fields: [claimedByUserId], references: [id])
+
+  expensesPaid          Expense[]              @relation("ExpenseGuestPayer")
+  expenseParticipations ExpenseParticipant[]
+  roomMembers           RoomMember[]
+  paymentsFrom          Payment[]              @relation("PaymentFromGuest")
+  paymentsTo            Payment[]              @relation("PaymentToGuest")
+  planParticipations    PlanParticipant[]
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  roomId            String
+  fromUserId        String?
+  fromGuestMemberId String?
+  toUserId          String?
+  toGuestMemberId   String?
+  amount            Float
+  note              String?
+  paidAt            DateTime
+  createdByUserId   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  room          Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  fromUser      User?        @relation("PaymentFromUser", fields: [fromUserId], references: [id])
+  fromGuest     GuestMember? @relation("PaymentFromGuest", fields: [fromGuestMemberId], references: [id])
+  toUser        User?        @relation("PaymentToUser", fields: [toUserId], references: [id])
+  toGuest       GuestMember? @relation("PaymentToGuest", fields: [toGuestMemberId], references: [id])
+  createdByUser User         @relation("PaymentCreator", fields: [createdByUserId], references: [id])
+}
+
+// ── Planning Foundation ───────────────────────────────────────────────────────
+
+model Plan {
+  id              String    @id @default(uuid())
+  roomId          String?
+  name            String
+  description     String?
+  type            String    @default("custom") // "trip"|"party"|"event"|"moving"|"wedding"|"custom"
+  status          String    @default("draft")  // "draft"|"active"|"completed"|"archived"
+  estimatedTotal  Float     @default(0)
+  currency        String    @default("VND")
+  startDate       DateTime?
+  endDate         DateTime?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  room          Room?             @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  createdByUser User              @relation("PlanCreator", fields: [createdByUserId], references: [id])
+  participants  PlanParticipant[]
+  expenses      PlanExpense[]
+}
+
+model PlanParticipant {
+  id            String   @id @default(uuid())
+  planId        String
+  userId        String?
+  guestMemberId String?
+  displayName   String?
+  type          String   @default("user") // "user"|"guest"|"manual"
+  role          String   @default("member") // "owner"|"member"
+  createdAt     DateTime @default(now())
+
+  plan        Plan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestMember GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: Cascade)
+}
+
+model PlanExpense {
+  id                   String   @id @default(uuid())
+  planId               String
+  title                String
+  estimatedAmount      Float
+  category             String   @default("other")
+  splitType            String   @default("equal")
+  note                 String?
+  participants         String   // JSON-encoded array of { userId?, guestMemberId? }
+  convertedToExpenseId String?  // populated on Plan→Expense conversion
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+}
+
+// ── Budget Tracking ───────────────────────────────────────────────────────────
+
+model Budget {
+  id        String   @id @default(uuid())
+  userId    String
+  roomId    String?
+  category  String?  // null = overall monthly budget
+  amount    Float
+  month     Int      // 1–12
+  year      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room? @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // Note: Uniqueness is enforced at the application level via findFirst + update/create
+  // instead of @@unique, because nullable fields in compound unique constraints cause
+  // Prisma client-side validation issues.
+}
+
+// 🧠 AI Intelligence 🧠
+model FinancialProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  profileData     String   // JSON-encoded string of the inferred profile
+  lastComputedAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
