@@ -56,7 +56,7 @@ export default function ImportExcelModal({ open, onClose }) {
     try {
       const data = await importApi.previewRoomImport(currentRoom.roomId, file);
       setPreview(data);
-      setSelectedRows(data.rows.filter((row) => row.status !== 'error').map((row) => row.rowIndex));
+      setSelectedRows(data.rows.filter((row) => row.status === 'valid' || row.status === 'warning').map((row) => row.rowIndex));
       setMappings(buildInitialMappings(data.members));
       setStep(1);
     } catch (error) {
@@ -134,9 +134,12 @@ export default function ImportExcelModal({ open, onClose }) {
           <div className="space-y-4">
             <ImportSummaryCard summary={{
               totalRows: selectedRows.length,
+              candidateRows: selectedRows.length,
+              skippedRows: 0,
               validRows: selectedPreviewRows.filter((row) => row.status === 'valid').length,
               warningRows: selectedPreviewRows.filter((row) => row.status === 'warning').length,
               errorRows: 0,
+              blockingRows: 0,
               totalAmount: selectedPreviewRows.reduce((sum, row) => sum + row.amount, 0),
             }} />
             <div className="rounded-xl border border-white/5 bg-dark-800 p-4 text-sm text-gray-300">

@@ -9,7 +9,6 @@ const sessions = new Map();
 
 export async function createImportPreview({ roomId, userId, fileBuffer }, db = prisma) {
   cleanupExpiredSessions();
-  const parsedRows = parseWorkbookBuffer(fileBuffer);
   const [existingExpenses, roomDirectory] = await Promise.all([
     db.expense.findMany({
       where: { roomId },
@@ -20,8 +19,9 @@ export async function createImportPreview({ roomId, userId, fileBuffer }, db = p
     }),
     getRoomMemberDirectory(roomId, db),
   ]);
+  const parsed = parseWorkbookBuffer(fileBuffer, { memberNames: roomDirectory.map((member) => member.displayName) });
 
-  const rows = validatePreviewRows(parsedRows, existingExpenses);
+  const rows = validatePreviewRows(parsed.rows, existingExpenses);
   const summary = buildPreviewSummary(rows);
   const members = suggestMemberMatches(summary.detectedMembers, roomDirectory);
   const session = createImportSession({ roomId, userId, rows, summary });
@@ -31,6 +31,7 @@ export async function createImportPreview({ roomId, userId, fileBuffer }, db = p
     summary,
     members,
     rows,
+    diagnostics: parsed.diagnostics,
   };
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, FileDown, FileUp, Plus } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { exportExpensesToCsv } from '../../utils/exportCsv';
 import { useApp } from '../../context/AppContext';
@@ -41,7 +41,7 @@ export default function RoomTopBarActions({ onAddExpense }) {
         className="btn-secondary h-8 px-2.5 text-xs font-medium flex items-center gap-1 border border-white/5 bg-white/[0.01]"
         title="Xuất dữ liệu"
       >
-        <Download className="w-3.5 h-3.5" />
+        <FileDown className="w-3.5 h-3.5" />
         <span className="hidden md:inline">Xuất dữ liệu</span>
       </button>
 
@@ -51,7 +51,7 @@ export default function RoomTopBarActions({ onAddExpense }) {
           className="btn-secondary h-8 px-2.5 text-xs font-medium flex items-center gap-1 border border-white/5 bg-white/[0.01]"
           title="Nhập dữ liệu"
         >
-          <Upload className="w-3.5 h-3.5" />
+          <FileUp className="w-3.5 h-3.5" />
           <span className="hidden md:inline">Nhập dữ liệu</span>
         </button>
       )}

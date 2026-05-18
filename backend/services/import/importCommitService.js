@@ -20,9 +20,12 @@ export async function commitImport({ importId, roomId, userId, memberMappings = 
 
   for (const row of session.rows) {
     if (!selected.has(row.rowIndex)) continue;
-    if (row.status === 'error') {
+    if (row.status === 'error' || row.status === 'skipped') {
       skippedRows += 1;
-      errors.push({ rowIndex: row.rowIndex, message: 'Dòng có lỗi chặn và đã bị bỏ qua.' });
+      errors.push({
+        rowIndex: row.rowIndex,
+        message: row.status === 'skipped' ? 'Dòng siêu dữ liệu đã được bỏ qua.' : 'Dòng có lỗi chặn và đã bị bỏ qua.',
+      });
       continue;
     }
 

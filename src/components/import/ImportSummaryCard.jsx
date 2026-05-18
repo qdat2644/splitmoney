@@ -10,10 +10,10 @@ export default function ImportSummaryCard({ summary, result = false }) {
       { label: 'Tổng đã nhập', value: formatCurrency(summary.totalAmount, true) },
     ]
     : [
-      { label: 'Tổng dòng', value: summary.totalRows },
-      { label: 'Hợp lệ', value: summary.validRows },
-      { label: 'Cảnh báo', value: summary.warningRows },
-      { label: 'Lỗi', value: summary.errorRows },
+      { label: 'Ứng viên nhập', value: summary.candidateRows ?? summary.totalRows },
+      { label: 'Đã bỏ qua', value: summary.skippedRows ?? 0 },
+      { label: 'Cần kiểm tra', value: summary.warningRows },
+      { label: 'Lỗi chặn', value: summary.blockingRows ?? summary.errorRows },
       { label: 'Tổng tiền', value: formatCurrency(summary.totalAmount, true) },
     ];
 

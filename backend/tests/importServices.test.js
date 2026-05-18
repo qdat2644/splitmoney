@@ -15,6 +15,7 @@ vi.mock('../services/intelligence/personalFinanceProfileService.js', () => ({
 const {
   parseWorkbookBuffer,
   parseImportAmount,
+  analyzeWorksheetRows,
 } = await import('../services/import/excelImportParser.js');
 const {
   suggestMemberMatch,
@@ -55,12 +56,14 @@ describe('room-scoped excel import services', () => {
     xlsx.utils.book_append_sheet(workbook, sheet, 'Sheet1');
     const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
-    const [row] = parseWorkbookBuffer(buffer);
+    const { rows, diagnostics } = parseWorkbookBuffer(buffer, { memberNames: ['Đạt', 'Trà'] });
+    const [row] = rows;
     expect(row.title).toBe('Cafe');
     expect(row.amount).toBe(100000);
     expect(row.paidBySourceName).toBe('Đạt');
     expect(row.participantSourceNames).toEqual(['Đạt', 'Trà']);
     expect(row.category).toBe('drinks');
+    expect(diagnostics.detectedHeaderRow).toBe(1);
   });
 
   it('parses Vietnamese legacy amount formats', () => {
@@ -99,6 +102,61 @@ describe('room-scoped excel import services', () => {
     }]);
     expect(row.status).toBe('warning');
     expect(row.warnings).toContain('Có thể đã tồn tại khoản chi tương tự.');
+  });
+
+  it('skips metadata and summary rows around a merged-style legacy header', () => {
+    const analysis = analyzeWorksheetRows([
+      ['CHI TIÊU THÁNG 5', '', '', '', ''],
+      ['', '', '', '', ''],
+      ['Ngày', 'Số tiền', 'Trà', 'Đạt', 'Ghi chú'],
+      ['2026-05-18', '250k', 'chi', '125000', 'ăn tối'],
+      ['', '', '', '', ''],
+      ['Tổng cộng', '250k', '', '', ''],
+    ], { memberNames: ['Trà', 'Đạt'] });
+
+    expect(analysis.diagnostics.detectedHeaderRow).toBe(3);
+    expect(analysis.rows.filter((row) => row.status !== 'skipped')).toHaveLength(1);
+    expect(analysis.diagnostics.skippedRowsCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('classifies room-member columns separately from descriptive columns', () => {
+    const analysis = analyzeWorksheetRows([
+      ['Ngày', 'Số tiền', 'Trà', 'Đạt', 'Ghi chú'],
+      ['2026-05-18', '250k', 'chi', '125000', 'ăn tối'],
+    ], { memberNames: ['Trà', 'Đạt'] });
+
+    expect(analysis.diagnostics.detectedColumns.memberColumns).toEqual([
+      { index: 2, header: 'Trà' },
+      { index: 3, header: 'Đạt' },
+    ]);
+    expect(analysis.diagnostics.detectedColumns.title).toEqual({ index: 4, header: 'Ghi chú' });
+  });
+
+  it('infers a title from nearby descriptive text instead of member columns', () => {
+    const analysis = analyzeWorksheetRows([
+      ['Ngày', 'Số tiền', 'Trà', 'Đạt', 'Ghi chú'],
+      ['2026-05-18', '250k', 'chi', '125000', 'tiền cọc phòng'],
+    ], { memberNames: ['Trà', 'Đạt'] });
+    const row = analysis.rows.find((item) => item.status !== 'skipped');
+
+    expect(row.title).toBe('tiền cọc phòng');
+    expect(row.paidBySourceName).toBe('Trà');
+    expect(row.participantSourceNames).toEqual(['Đạt']);
+  });
+
+  it('downgrades recoverable missing title and participant issues to warnings', () => {
+    const [row] = validatePreviewRows([{
+      ...baseRow(),
+      title: '',
+      participantSourceNames: [],
+      warnings: [],
+      errors: [],
+    }]);
+
+    expect(row.status).toBe('warning');
+    expect(row.errors).toEqual([]);
+    expect(row.warnings).toContain('Chưa xác định chắc tên khoản chi.');
+    expect(row.warnings).toContain('Chưa xác định chắc người tham gia.');
   });
 
   it('rejects mappings to members from another room', async () => {
