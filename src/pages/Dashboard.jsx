@@ -1,20 +1,9 @@
 import { motion } from 'framer-motion';
-import {
-  Activity,
-  ArrowRight,
-  CalendarRange,
-  Receipt,
-  Users,
-  Wallet,
-  PiggyBank,
-  Download,
-  Plus
-} from 'lucide-react';
+import { Activity, ArrowRight, PiggyBank, Plus, Receipt, Sparkles, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useBudgets } from '../hooks/useBudgets';
 import { usePlans } from '../hooks/usePlans';
-import SummaryCard from '../components/dashboard/SummaryCard';
 import ExpenseCard from '../components/expenses/ExpenseCard';
 import { SettlementItem } from '../components/settlements/SettlementList';
 import InsightsWidget from '../components/dashboard/InsightsWidget';
@@ -42,13 +31,23 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
   const activePlans = plans.filter((plan) => plan.roomId === roomId && plan.status === 'active');
   const avgPerPerson = members.length > 0 ? stats.totalExpenses / members.length : 0;
   const unresolvedAmount = settlements.reduce((sum, item) => sum + item.amount, 0);
+  const largestImbalance = [...stats.perMember].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))[0];
+  const narrative = buildRoomNarrative({ settlements, unresolvedAmount, activePlans, roomBudgets });
+  const prioritySignals = buildRoomPrioritySignals({
+    roomId,
+    settlements,
+    unresolvedAmount,
+    activePlans,
+    roomBudgets,
+    recentExpenses,
+  });
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         eyebrow="Nhóm"
         title="Tổng quan"
-        subtitle="Quản lý chi phí nhóm, theo dõi số dư, lập kế hoạch và báo cáo AI."
+        subtitle="Không gian tài chính chung cho số dư, kế hoạch và nhịp chi tiêu của phòng."
         actions={
           <div className="flex items-center gap-2">
             <ExportButton
@@ -57,7 +56,7 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
               onExport={(format) => exportApi.exportRoom(roomId, format)}
             />
             <AppButton onClick={onAddExpense} icon={Plus} size="sm">
-              Thêm chi phí
+              Thêm khoản chi
             </AppButton>
           </div>
         }
@@ -67,166 +66,189 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
         <SkeletonPage />
       ) : (
         <div className="space-y-6">
-          {/* ── Hero Area: Summary Stats ── */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <SummaryCard
-              icon={Wallet}
-              label="Tổng chi tiêu"
-              value={formatCurrency(stats.totalExpenses, true)}
-              subtext={`${stats.totalCount} hóa đơn`}
-              colorClass="text-blue-400"
-              bgClass="bg-blue-500/10"
-              index={0}
-            />
-            <SummaryCard
-              icon={Users}
-              label="Thành viên"
-              value={`${members.length} người`}
-              subtext={`TB ${formatCurrency(avgPerPerson, true)}/người`}
-              colorClass="text-purple-400"
-              bgClass="bg-purple-500/10"
-              index={1}
-            />
-            <SummaryCard
-              icon={Wallet}
-              label="Chưa thanh toán"
-              value={formatCurrency(unresolvedAmount, true)}
-              subtext={`${settlements.length} giao dịch chờ`}
-              colorClass="text-orange-400"
-              bgClass="bg-orange-500/10"
-              index={2}
-            />
-            <SummaryCard
-              icon={CalendarRange}
-              label="Kế hoạch & Ngân sách"
-              value={`${activePlans.length} kế hoạch`}
-              subtext={`${roomBudgets.length} ngân sách hoạt động`}
-              colorClass="text-emerald-400"
-              bgClass="bg-emerald-500/10"
-              index={3}
-            />
-          </div>
-
-          {/* ── Modern Workspace Main Grid ── */}
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Left Column: Shared activity, member ledger, budgets & plans */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Financial Health / Settlements overview */}
-              <AppCard className="p-4 bg-dark-800 border border-white/5">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div>
-                    <p className="text-[11px] font-medium text-gray-500">Trạng thái thanh toán</p>
-                    <h2 className="text-sm font-semibold text-white">
-                      {settlements.length === 0 ? 'Phòng đang cân bằng số dư' : 'Có số dư cần thanh lý'}
-                    </h2>
-                  </div>
-                  <Link to={`/rooms/${roomId}/settlements`} className="text-xs text-blue-400 hover:text-blue-300">
-                    Chi tiết thanh lý
-                  </Link>
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(15rem,0.55fr)]">
+            <AppCard className="border border-white/5 bg-dark-800 p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium text-gray-500">{narrative.eyebrow}</p>
+                  <h2 className="max-w-xl text-lg font-semibold leading-snug text-white">{narrative.headline}</h2>
+                  <p className="text-sm leading-relaxed text-gray-400">{narrative.description}</p>
                 </div>
-
-                {settlements.length === 0 ? (
-                  <EmptyState
-                    icon={Wallet}
-                    title="Mọi người đã hoàn thành thanh toán"
-                    description="Không có khoản nợ đọng nào trong phòng này."
-                    color="emerald"
-                    compact
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {settlements.slice(0, 3).map((settlement, index) => (
-                      <SettlementItem key={`${settlement.from}-${settlement.to}`} settlement={settlement} index={index} />
-                    ))}
-                  </div>
-                )}
-              </AppCard>
-
-              {/* Members Balances */}
-              <AppCard className="p-4 bg-dark-800 border border-white/5">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-medium text-gray-500">Bảng cân đối thành viên</h2>
-                  <Link to={`/rooms/${roomId}/members`} className="text-xs text-blue-400 hover:text-blue-300">Quản lý thành viên</Link>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-white/5 bg-white/5">
+                  <Wallet className="h-4 w-4 text-gray-300" />
                 </div>
-                <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 divide-y sm:divide-y-0 divide-white/5">
-                  {stats.perMember.map((memberBalance, index) => {
-                    const member = members.find((item) => item.id === memberBalance.id);
-                    const positive = memberBalance.balance > 1;
-                    const negative = memberBalance.balance < -1;
-
-                    return (
-                      <motion.div
-                        key={memberBalance.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.03 }}
-                        className="flex items-center gap-2.5 py-2.5"
-                      >
-                        <Avatar member={member} size="xs" />
-                        <span className="min-w-0 flex-1 truncate text-xs text-gray-300 font-medium">{memberBalance.name}</span>
-                        <span className={`text-xs font-semibold ${positive ? 'text-emerald-400' : negative ? 'text-red-400' : 'text-gray-500'}`}>
-                          {positive ? '+' : ''}{formatCurrency(memberBalance.balance, true)}
-                        </span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </AppCard>
-
-              {/* Plans & Budgets split */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <AppCard className="p-4 bg-dark-800 border border-white/5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xs font-medium text-gray-500">Kế hoạch hoạt động</h2>
-                    <Link to="/plans" className="text-xs text-blue-400 hover:text-blue-300">Tất cả</Link>
-                  </div>
-                  <div className="space-y-2">
-                    {activePlans.length === 0 ? (
-                      <p className="text-xs text-gray-500 py-2">Chưa có kế hoạch chia tiền nào.</p>
-                    ) : (
-                      activePlans.slice(0, 2).map((plan) => (
-                        <div key={plan.id} className="rounded border border-white/5 bg-dark-900/40 p-2.5 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="font-semibold text-gray-200">{plan.title}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">Dự toán</p>
-                          </div>
-                          <span className="font-semibold text-white">{formatCurrency(plan.estimatedTotal || 0, true)}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </AppCard>
-
-                <AppCard className="p-4 bg-dark-800 border border-white/5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xs font-medium text-gray-500">Ngân sách phòng</h2>
-                    <Link to="/budget" className="text-xs text-blue-400 hover:text-blue-300">Quản lý</Link>
-                  </div>
-                  <div className="space-y-2">
-                    {roomBudgets.length === 0 ? (
-                      <p className="text-xs text-gray-500 py-2">Chưa thiết lập ngân sách phòng.</p>
-                    ) : (
-                      roomBudgets.slice(0, 2).map((budget) => (
-                        <div key={budget.id} className="rounded border border-white/5 bg-dark-900/40 p-2.5 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="font-semibold text-gray-200">{budget.title || budget.category}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">Hạn mức tháng</p>
-                          </div>
-                          <span className="font-semibold text-white">{formatCurrency(budget.amount, true)}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </AppCard>
               </div>
+              <div className="mt-5 grid gap-3 border-t border-white/5 pt-4 sm:grid-cols-3">
+                <Metric label="Chưa thanh toán" value={formatCurrency(unresolvedAmount, true)} />
+                <Metric label="Thành viên" value={`${members.length} người`} />
+                <Metric label="Kế hoạch hoạt động" value={`${activePlans.length}`} />
+              </div>
+            </AppCard>
 
-              {/* Shared Activity Ledger */}
-              <div className="space-y-2.5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <CompactMetric
+                label="Tổng chi tiêu"
+                value={formatCurrency(stats.totalExpenses, true)}
+                meta={`${stats.totalCount} hóa đơn`}
+              />
+              <CompactMetric
+                label="Bình quân mỗi người"
+                value={formatCurrency(avgPerPerson, true)}
+                meta={`${roomBudgets.length} ngân sách đang theo dõi`}
+              />
+            </div>
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.75fr)]">
+            <div className="space-y-6">
+              <section className="space-y-3">
+                <SectionHeading
+                  icon={Sparkles}
+                  title="Việc cần chú ý"
+                  description="Những việc đáng xử lý trước để phòng vận hành nhẹ hơn."
+                />
+                <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
+                  {prioritySignals.length === 0 ? (
+                    <p className="text-sm text-gray-400">
+                      Phòng đang cân bằng. Hiện chưa có việc cần xử lý gấp.
+                    </p>
+                  ) : (
+                    prioritySignals.map((signal) => (
+                      <div key={signal.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium text-white">{signal.title}</p>
+                          {signal.to && (
+                            <Link to={signal.to} className="text-xs text-blue-400 hover:text-blue-300">
+                              {signal.actionLabel}
+                            </Link>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm text-gray-400">{signal.description}</p>
+                      </div>
+                    ))
+                  )}
+                </AppCard>
+              </section>
+
+              <section className="space-y-3">
+                <SectionHeading
+                  title="Sức khỏe số dư"
+                  description="Ai đang dương, ai đang âm và mức lệch lớn nhất trong phòng."
+                />
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
+                  <AppCard className="border border-white/5 bg-dark-800 p-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-white">Bảng cân đối thành viên</h3>
+                      <Link to={`/rooms/${roomId}/members`} className="text-xs text-blue-400 hover:text-blue-300">
+                        Quản lý
+                      </Link>
+                    </div>
+                    <div className="mt-3 grid gap-x-4 gap-y-1 divide-y divide-white/5 sm:grid-cols-2 sm:divide-y-0">
+                      {stats.perMember.map((memberBalance, index) => {
+                        const member = members.find((item) => item.id === memberBalance.id);
+                        const positive = memberBalance.balance > 1;
+                        const negative = memberBalance.balance < -1;
+
+                        return (
+                          <motion.div
+                            key={memberBalance.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="flex items-center gap-2.5 py-2.5"
+                          >
+                            <Avatar member={member} size="xs" />
+                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-300">
+                              {memberBalance.name}
+                            </span>
+                            <span className={`text-xs font-semibold ${positive ? 'text-emerald-400' : negative ? 'text-red-400' : 'text-gray-500'}`}>
+                              {positive ? '+' : ''}{formatCurrency(memberBalance.balance, true)}
+                            </span>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </AppCard>
+
+                  <AppCard className="border border-white/5 bg-dark-800 p-4">
+                    <p className="text-[11px] font-medium text-gray-500">Nhịp nhóm</p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">
+                      {largestImbalance?.balance
+                        ? `${largestImbalance.name} đang lệch nhiều nhất`
+                        : 'Các thành viên đang cân bằng'}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-400">
+                      {largestImbalance?.balance
+                        ? `${largestImbalance.name} hiện có số dư ${formatCurrency(largestImbalance.balance, true)}.`
+                        : 'Chưa có chênh lệch đáng kể giữa các thành viên.'}
+                    </p>
+                  </AppCard>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <SectionHeading
+                  title="Kế hoạch và ngân sách chung"
+                  description="Những cam kết đang định hình chi tiêu sắp tới của phòng."
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AppCard className="border border-white/5 bg-dark-800 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-white">Kế hoạch hoạt động</h3>
+                      <Link to="/plans" className="text-xs text-blue-400 hover:text-blue-300">Tất cả</Link>
+                    </div>
+                    <div className="space-y-2">
+                      {activePlans.length === 0 ? (
+                        <p className="text-sm text-gray-400">
+                          Chưa có kế hoạch chung. Tạo một chuyến đi hoặc mục tiêu nhóm để ước lượng trước chi phí.
+                        </p>
+                      ) : (
+                        activePlans.slice(0, 2).map((plan) => (
+                          <div key={plan.id} className="flex items-center justify-between rounded border border-white/5 bg-dark-900/40 p-2.5 text-xs">
+                            <div>
+                              <p className="font-semibold text-gray-200">{plan.title}</p>
+                              <p className="mt-0.5 text-[10px] text-gray-500">Dự toán</p>
+                            </div>
+                            <span className="font-semibold text-white">{formatCurrency(plan.estimatedTotal || 0, true)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </AppCard>
+
+                  <AppCard className="border border-white/5 bg-dark-800 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-white">Ngân sách phòng</h3>
+                      <Link to="/budget" className="text-xs text-blue-400 hover:text-blue-300">Quản lý</Link>
+                    </div>
+                    <div className="space-y-2">
+                      {roomBudgets.length === 0 ? (
+                        <p className="text-sm text-gray-400">
+                          Chưa có ngân sách phòng. Thiết lập hạn mức để Zyra theo dõi nhịp chi chung tốt hơn.
+                        </p>
+                      ) : (
+                        roomBudgets.slice(0, 2).map((budget) => (
+                          <div key={budget.id} className="flex items-center justify-between rounded border border-white/5 bg-dark-900/40 p-2.5 text-xs">
+                            <div>
+                              <p className="font-semibold text-gray-200">{budget.title || budget.category}</p>
+                              <p className="mt-0.5 text-[10px] text-gray-500">Hạn mức tháng</p>
+                            </div>
+                            <span className="font-semibold text-white">{formatCurrency(budget.amount, true)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </AppCard>
+                </div>
+              </section>
+
+              <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                    <Activity className="h-3.5 w-3.5 text-gray-400" />
-                    Chi phí gần đây
-                  </h2>
+                  <SectionHeading
+                    icon={Activity}
+                    title="Hoạt động gần đây"
+                    description="Dòng sự kiện hỗ trợ bối cảnh cho phòng."
+                  />
                   <Link to={`/rooms/${roomId}/expenses`} className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
                     Xem tất cả <ArrowRight className="h-3 w-3" />
                   </Link>
@@ -234,9 +256,9 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
                 {recentExpenses.length === 0 ? (
                   <EmptyState
                     icon={Receipt}
-                    title="Chưa ghi nhận chi phí nào"
-                    description="Ghi nhận hóa đơn chi tiêu đầu tiên của phòng."
-                    action={<AppButton onClick={onAddExpense} size="xs">Thêm chi phí</AppButton>}
+                    title="Chưa có khoản chi đầu tiên"
+                    description="Ghi nhận khoản chi đầu tiên để Zyra bắt đầu kể câu chuyện tài chính của phòng."
+                    action={<AppButton onClick={onAddExpense} size="xs">Thêm khoản chi</AppButton>}
                     compact
                   />
                 ) : (
@@ -246,49 +268,166 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Right Column: Intelligence Rail */}
-            <div className="space-y-6">
-              {/* AI Assistant Hub */}
-              <InsightsWidget />
-
-              {/* Copilot Alerts / Risks */}
-              <ContextualCopilotPanel
-                title="Cảnh báo từ trợ lý AI"
-                types={['debt_attention']}
-                limit={2}
-              />
-
-              {/* Room Quick actions */}
-              <section className="space-y-2.5">
-                <h3 className="text-[11px] font-medium text-gray-500">Lối tắt</h3>
-                <div className="space-y-2">
-                  <AppCard className="flex flex-col gap-2 p-3 bg-dark-800 border border-white/5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Thêm hóa đơn nhanh</span>
-                      <AppButton onClick={onAddExpense} size="xs" icon={Plus}>
-                        Thêm
-                      </AppButton>
-                    </div>
-                    <div className="border-t border-white/5 my-1" />
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Quản lý ngân sách phòng</span>
-                      <Link to="/budget" className="text-xs text-blue-400 hover:underline">Quản lý</Link>
-                    </div>
-                    <div className="border-t border-white/5 my-1" />
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Báo cáo kế hoạch AI</span>
-                      <Link to="/plans" className="text-xs text-blue-400 hover:underline">Kế hoạch</Link>
-                    </div>
-                  </AppCard>
-                </div>
               </section>
             </div>
+
+            <aside className="space-y-4">
+              <AppCard className="border border-white/5 bg-dark-800 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-medium text-gray-500">Thanh toán</p>
+                    <h2 className="mt-1 text-sm font-semibold text-white">
+                      {settlements.length === 0 ? 'Phòng đang cân bằng' : 'Có khoản cần xử lý'}
+                    </h2>
+                  </div>
+                  <Link to={`/rooms/${roomId}/settlements`} className="text-xs text-blue-400 hover:text-blue-300">
+                    Chi tiết
+                  </Link>
+                </div>
+                <div className="mt-4">
+                  {settlements.length === 0 ? (
+                    <p className="text-sm text-gray-400">Không có công nợ tồn đọng giữa các thành viên.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {settlements.slice(0, 3).map((settlement, index) => (
+                        <SettlementItem key={`${settlement.from}-${settlement.to}`} settlement={settlement} index={index} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </AppCard>
+
+              <InsightsWidget />
+              <ContextualCopilotPanel title="Quan sát từ trợ lý AI" types={['debt_attention']} limit={2} />
+
+              <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
+                <div className="flex items-center gap-2">
+                  <PiggyBank className="h-4 w-4 text-emerald-400" />
+                  <h2 className="text-sm font-semibold text-white">Lối tắt</h2>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <QuickAction label="Thêm hóa đơn nhanh" action={<AppButton onClick={onAddExpense} size="xs" icon={Plus}>Thêm</AppButton>} />
+                  <QuickAction label="Quản lý ngân sách phòng" action={<Link to="/budget" className="text-xs text-blue-400 hover:text-blue-300">Quản lý</Link>} />
+                  <QuickAction label="Xem kế hoạch" action={<Link to="/plans" className="text-xs text-blue-400 hover:text-blue-300">Kế hoạch</Link>} />
+                </div>
+              </AppCard>
+            </aside>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function SectionHeading({ icon: Icon, title, description }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="h-4 w-4 text-gray-400" />}
+        <h2 className="text-sm font-semibold text-white">{title}</h2>
+      </div>
+      {description && <p className="text-xs leading-relaxed text-gray-500">{description}</p>}
+    </div>
+  );
+}
+
+function Metric({ label, value }) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium text-gray-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function CompactMetric({ label, value, meta }) {
+  return (
+    <AppCard className="border border-white/5 bg-dark-800 p-4">
+      <p className="text-[11px] font-medium text-gray-500">{label}</p>
+      <p className="mt-2 text-base font-semibold text-white">{value}</p>
+      <p className="mt-1 text-xs text-gray-500">{meta}</p>
+    </AppCard>
+  );
+}
+
+function QuickAction({ label, action }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-2 first:border-t-0 first:pt-0">
+      <span className="text-gray-400">{label}</span>
+      {action}
+    </div>
+  );
+}
+
+function buildRoomNarrative({ settlements, unresolvedAmount, activePlans, roomBudgets }) {
+  if (settlements.length > 0) {
+    return {
+      eyebrow: 'Công nợ',
+      headline: 'Phòng vẫn khỏe, nhưng còn vài khoản cần chốt.',
+      description: `${formatCurrency(unresolvedAmount, true)} đang chờ thanh toán giữa các thành viên.`,
+    };
+  }
+
+  if (activePlans.length > 0) {
+    return {
+      eyebrow: 'Kế hoạch chung',
+      headline: 'Phòng đang cân bằng và có kế hoạch sắp tới.',
+      description: `${activePlans.length} kế hoạch đang hoạt động để cả nhóm theo dõi trước chi phí.`,
+    };
+  }
+
+  if (roomBudgets.length === 0) {
+    return {
+      eyebrow: 'Nhịp phòng',
+      headline: 'Phòng đang yên ổn, nhưng chưa có ngân sách chung.',
+      description: 'Thiết lập hạn mức giúp mọi người nhìn trước rủi ro chi tiêu dễ hơn.',
+    };
+  }
+
+  return {
+    eyebrow: 'Nhịp phòng',
+    headline: 'Phòng đang cân bằng và vận hành khá gọn.',
+    description: 'Công nợ hiện đã thông thoáng, kế hoạch và ngân sách đang ở trạng thái dễ theo dõi.',
+  };
+}
+
+function buildRoomPrioritySignals({ roomId, settlements, unresolvedAmount, activePlans, roomBudgets, recentExpenses }) {
+  const signals = [];
+
+  if (settlements.length > 0) {
+    signals.push({
+      title: 'Chốt các khoản còn mở',
+      description: `${settlements.length} giao dịch đang chờ với tổng ${formatCurrency(unresolvedAmount, true)}.`,
+      to: `/rooms/${roomId}/settlements`,
+      actionLabel: 'Xem thanh toán',
+    });
+  }
+
+  if (activePlans.length > 0) {
+    signals.push({
+      title: 'Theo dõi kế hoạch đang chạy',
+      description: `${activePlans.length} kế hoạch đang tác động đến chi tiêu sắp tới của nhóm.`,
+      to: '/plans',
+      actionLabel: 'Mở kế hoạch',
+    });
+  }
+
+  if (roomBudgets.length === 0) {
+    signals.push({
+      title: 'Chưa có ngân sách phòng',
+      description: 'Thiết lập hạn mức để Zyra cảnh báo sớm khi nhịp chi chung tăng nhanh.',
+      to: '/budget',
+      actionLabel: 'Tạo ngân sách',
+    });
+  }
+
+  if (recentExpenses.length === 0) {
+    signals.push({
+      title: 'Chưa có hoạt động để phân tích',
+      description: 'Ghi nhận khoản chi đầu tiên để bắt đầu tạo bức tranh chung của phòng.',
+      actionLabel: '',
+    });
+  }
+
+  return signals.slice(0, 4);
 }

@@ -39,7 +39,7 @@ export default function RecommendationCard({ recommendation, compact = false }) 
   const Icon = style.icon;
 
   return (
-    <article className={`rounded-xl border bg-white/3 p-4 ${style.border}`}>
+    <article className={`rounded-xl border bg-white/3 p-4 transition-colors hover:bg-white/[0.04] ${style.border}`}>
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-300" />
         <div className="min-w-0 flex-1">
