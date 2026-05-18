@@ -2,9 +2,9 @@ import xlsx from 'xlsx';
 import { parseVietnameseAmount, safeLower } from '../ai/utils.js';
 
 const COLUMN_ALIASES = {
-  title: ['ten', 'khoan chi', 'noi dung', 'mo ta', 'ten khoan chi', 'title'],
+  title: ['ten', 'khoan chi', 'noi dung', 'mo ta', 'ten khoan chi', 'title', 'giao dich'],
   amount: ['so tien', 'tong tien', 'amount', 'chi phi', 'tong chi'],
-  payer: ['nguoi tra', 'nguoi thanh toan', 'paid by', 'payer'],
+  payer: ['nguoi tra', 'nguoi thanh toan', 'paid by', 'payer', 'chi boi'],
   date: ['ngay', 'ngay chi', 'date'],
   category: ['danh muc', 'category'],
   participants: ['nguoi tham gia', 'participants', 'chia cho'],
@@ -35,10 +35,13 @@ export function analyzeWorksheetRows(rows, { memberNames = [] } = {}) {
   if (detectedHeaderRow < 0) return emptyAnalysis();
 
   const headers = rows[detectedHeaderRow].map((value) => String(value || '').trim());
+  const candidateSecondaryHeaders = rows[detectedHeaderRow + 1]?.map((value) => String(value || '').trim()) || [];
+  const secondaryHeaders = isSecondaryHeaderCandidate(candidateSecondaryHeaders) ? candidateSecondaryHeaders : [];
   const normalizedHeaders = headers.map(normalizeHeader);
   const profiles = buildColumnProfiles(rows, detectedHeaderRow, headers.length);
   const detectedColumns = classifyColumns({
     headers,
+    secondaryHeaders,
     normalizedHeaders,
     profiles,
     normalizedMemberNames,
@@ -108,7 +111,7 @@ function parseDataRow({ rowIndex, cells, headers, detectedColumns, normalizedMem
   if (populatedCells.length === 0) return null;
 
   const rowText = cells.map((cell) => normalizeHeader(cell)).filter(Boolean);
-  if (shouldSkipRow(cells, rowText)) return skippedRow(rowIndex, cells, headers, 'metadata');
+  if (shouldSkipRow(cells, rowText, detectedColumns)) return skippedRow(rowIndex, cells, headers, 'metadata');
 
   const amount = parseAmountFromColumns(cells, detectedColumns);
   const title = inferTitle(cells, detectedColumns, normalizedMemberNames);
@@ -163,16 +166,28 @@ function findHeaderRow(rows, normalizedMemberNames) {
   return best.score >= 3 ? best.index : -1;
 }
 
-function classifyColumns({ headers, normalizedHeaders, profiles, normalizedMemberNames }) {
+function classifyColumns({ headers, secondaryHeaders, normalizedHeaders, profiles, normalizedMemberNames }) {
   const directIndex = (field) => normalizedHeaders.findIndex((header) => COLUMN_ALIASES[field].includes(header));
+  const groupedMemberHeaders = expandGroupedHeaders(headers);
   const memberColumns = headers
-    .map((header, index) => ({ header, normalized: normalizedHeaders[index], index, profile: profiles[index] }))
-    .filter(({ normalized, profile }) => {
-      if (!normalized || SYSTEM_HEADERS.has(normalized)) return false;
+    .map((header, index) => ({
+      header,
+      groupHeader: groupedMemberHeaders[index],
+      subHeader: secondaryHeaders[index],
+      normalized: normalizedHeaders[index],
+      normalizedGroupHeader: normalizeHeader(groupedMemberHeaders[index]),
+      normalizedSubHeader: normalizeHeader(secondaryHeaders[index]),
+      index,
+      profile: profiles[index],
+    }))
+    .filter(({ normalized, normalizedGroupHeader, normalizedSubHeader, profile }) => {
+      if (SYSTEM_HEADERS.has(normalized)) return false;
+      const groupMatchesMember = normalizedMemberNames.has(normalizedGroupHeader);
       const headerMatchesMember = normalizedMemberNames.has(normalized);
       const numericHeavy = profile.numericCount >= Math.max(2, profile.textCount);
       const markerHeavy = profile.markerCount >= 1 && profile.markerCount >= profile.textCount;
-      return headerMatchesMember || numericHeavy || markerHeavy;
+      const hasMemberSubHeader = PAYER_MARKERS.includes(normalizedSubHeader) || PARTICIPANT_MARKERS.includes(normalizedSubHeader);
+      return headerMatchesMember || groupMatchesMember || (hasMemberSubHeader && Boolean(normalizedGroupHeader)) || numericHeavy || markerHeavy;
     });
 
   const excluded = new Set([
@@ -233,6 +248,7 @@ function titleColumnScore(profile, normalizedHeader, excluded) {
 function findDataStartRow(rows, headerRowIndex, detectedColumns) {
   for (let index = headerRowIndex + 1; index < rows.length; index += 1) {
     const row = rows[index];
+    if (isLikelySecondaryHeaderRow(row, detectedColumns)) continue;
     const amount = parseAmountFromColumns(row, detectedColumns);
     const hasMeaningfulText = row.some((cell, cellIndex) => cellIndex !== detectedColumns.amount && isMeaningfulText(cell));
     if (amount > 0 || hasMeaningfulText) return index;
@@ -250,7 +266,7 @@ function parseAmountFromColumns(cells, detectedColumns) {
 
 function inferTitle(cells, detectedColumns, normalizedMemberNames) {
   const explicit = getString(cells[detectedColumns.title]);
-  if (isUsableTitle(explicit, normalizedMemberNames)) return { value: explicit, source: 'explicit' };
+  if (isExplicitTitle(explicit)) return { value: explicit, source: 'explicit' };
 
   const candidateIndexes = cells
     .map((cell, index) => ({ cell, index }))
@@ -276,14 +292,15 @@ function inferPayer(cells, detectedColumns) {
   if (explicit) return { name: explicit, confidence: 1 };
 
   const marked = detectedColumns.memberColumns.find((column) => PAYER_MARKERS.includes(normalizeHeader(cells[column.index])));
-  if (marked) return { name: marked.header, confidence: 0.95 };
+  if (marked) return { name: memberColumnName(marked), confidence: 0.95 };
 
   const numericContributors = detectedColumns.memberColumns
-    .map((column) => ({ column, amount: parseImportAmount(cells[column.index]) }))
+    .filter((column) => PAYER_MARKERS.includes(column.normalizedSubHeader) || !column.normalizedSubHeader)
+    .map((column) => ({ column, amount: parseMemberAmount(cells[column.index]) }))
     .filter(({ amount }) => amount > 0)
     .sort((left, right) => right.amount - left.amount);
   if (numericContributors.length > 0 && numericContributors[0].amount > (numericContributors[1]?.amount || 0)) {
-    return { name: numericContributors[0].column.header, confidence: 0.65 };
+    return { name: memberColumnName(numericContributors[0].column), confidence: 0.65 };
   }
 
   return { name: '', confidence: 0 };
@@ -294,7 +311,8 @@ function inferParticipants(cells, detectedColumns, payerInfo) {
   if (explicitParticipants.length > 0) return { names: uniqueNames(explicitParticipants), shares: [], inferred: false };
 
   const shares = detectedColumns.memberColumns
-    .map((column) => ({ sourceName: column.header, shareAmount: parseImportAmount(cells[column.index]) }))
+    .filter((column) => PARTICIPANT_MARKERS.includes(column.normalizedSubHeader) || !column.normalizedSubHeader)
+    .map((column) => ({ sourceName: memberColumnName(column), shareAmount: parseMemberAmount(cells[column.index]) }))
     .filter(({ shareAmount }) => shareAmount > 0);
   if (shares.length > 0) {
     return {
@@ -306,10 +324,10 @@ function inferParticipants(cells, detectedColumns, payerInfo) {
 
   const debtMarkers = detectedColumns.memberColumns
     .filter((column) => PARTICIPANT_MARKERS.includes(normalizeHeader(cells[column.index])))
-    .map((column) => column.header);
+    .map((column) => memberColumnName(column));
   if (debtMarkers.length > 0) return { names: uniqueNames(debtMarkers), shares: [], inferred: true };
 
-  const allMembers = detectedColumns.memberColumns.map((column) => column.header);
+  const allMembers = detectedColumns.memberColumns.map((column) => memberColumnName(column));
   const canFallbackToAll = allMembers.length >= 2 && payerInfo.confidence >= 0.8;
   return {
     names: canFallbackToAll ? uniqueNames(allMembers) : [],
@@ -318,12 +336,13 @@ function inferParticipants(cells, detectedColumns, payerInfo) {
   };
 }
 
-function shouldSkipRow(cells, rowText) {
+function shouldSkipRow(cells, rowText, detectedColumns) {
   const populated = cells.filter((cell) => hasValue(cell));
   if (populated.length === 0) return true;
   if (populated.length === 1 && isMeaningfulText(populated[0])) return true;
   if (rowText.some((text) => SUMMARY_TERMS.includes(text))) return true;
   if (populated.every((cell) => SEPARATOR_RE.test(String(cell).trim()))) return true;
+  if (isLegacyFooterRow(cells, detectedColumns)) return true;
   return false;
 }
 
@@ -355,7 +374,11 @@ function serializeDetectedColumns(columns, headers) {
     date: headerInfo(columns.date, headers),
     category: headerInfo(columns.category, headers),
     participants: headerInfo(columns.participants, headers),
-    memberColumns: columns.memberColumns.map((column) => ({ index: column.index, header: column.header })),
+    memberColumns: columns.memberColumns.map((column) => ({
+      index: column.index,
+      header: memberColumnName(column),
+      ...(column.subHeader ? { subHeader: column.subHeader } : {}),
+    })),
   };
 }
 
@@ -382,7 +405,13 @@ function parseDate(value) {
     const parsed = xlsx.SSF.parse_date_code(value);
     if (parsed) return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d)).toISOString().slice(0, 10);
   }
-  const parsed = new Date(String(value).trim());
+  const text = String(value).trim();
+  const dayMonthYear = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dayMonthYear) {
+    const [, day, month, year] = dayMonthYear;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString().slice(0, 10);
+  }
+  const parsed = new Date(text);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
 }
 
@@ -399,7 +428,7 @@ function isMeaningfulText(value) {
   const text = getString(value);
   const normalized = normalizeHeader(text);
   return Boolean(text)
-    && parseImportAmount(text) === 0
+    && !looksLikeStandaloneAmount(text)
     && !SEPARATOR_RE.test(text)
     && !SUMMARY_TERMS.includes(normalized)
     && normalized.length >= 2;
@@ -448,4 +477,64 @@ function emptyAnalysis() {
       skippedRowsCount: 0,
     },
   };
+}
+
+function isExplicitTitle(value) {
+  const normalized = normalizeHeader(value);
+  return Boolean(getString(value))
+    && !looksLikeStandaloneAmount(value)
+    && !SEPARATOR_RE.test(getString(value))
+    && !SUMMARY_TERMS.includes(normalized);
+}
+
+function looksLikeStandaloneAmount(value) {
+  const normalized = safeLower(value).replace(/\s+/g, ' ').trim();
+  return /^-?\d[\d.,]*(?:\s*(k|tr|trieu|m|cu|nghin|vnd|d))?$/.test(normalized);
+}
+
+function isLegacyFooterRow(cells, detectedColumns) {
+  const title = normalizeHeader(cells[detectedColumns.title]);
+  const amountText = normalizeHeader(cells[detectedColumns.amount]);
+  const payer = normalizeHeader(cells[detectedColumns.payer]);
+  const dateText = normalizeHeader(cells[detectedColumns.date]);
+  const memberNames = new Set(detectedColumns.memberColumns.map((column) => normalizeHeader(memberColumnName(column))));
+  const hasMemberValues = detectedColumns.memberColumns.some((column) => hasValue(cells[column.index]));
+
+  if (title.includes('tong chi cua cac thanh vien')) return true;
+  if (title.includes('goi y chia tien')) return true;
+  if (title.startsWith('(dua vao cac khoan chi')) return true;
+  if (amountText === 'dang no') return true;
+  if (memberNames.has(title) && parseImportAmount(cells[detectedColumns.amount]) > 0 && !payer && !dateText && !hasMemberValues) return true;
+  return false;
+}
+
+function expandGroupedHeaders(headers) {
+  let current = '';
+  return headers.map((header) => {
+    const normalized = getString(header);
+    if (normalized) current = normalized;
+    return current;
+  });
+}
+
+function isLikelySecondaryHeaderRow(row, detectedColumns) {
+  const memberCells = detectedColumns.memberColumns.map((column) => normalizeHeader(row[column.index])).filter(Boolean);
+  if (memberCells.length === 0) return false;
+  return memberCells.every((cell) => PAYER_MARKERS.includes(cell) || PARTICIPANT_MARKERS.includes(cell));
+}
+
+function isSecondaryHeaderCandidate(row) {
+  const populated = row.map(normalizeHeader).filter(Boolean);
+  const markerCount = populated.filter((cell) => PAYER_MARKERS.includes(cell) || PARTICIPANT_MARKERS.includes(cell)).length;
+  return markerCount >= 2 && markerCount >= Math.ceil(populated.length / 2);
+}
+
+function memberColumnName(column) {
+  return column.groupHeader || column.header;
+}
+
+function parseMemberAmount(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw || raw === '-') return 0;
+  return parseImportAmount(raw.replace(/^-/, ''));
 }
