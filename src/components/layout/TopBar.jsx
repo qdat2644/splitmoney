@@ -1,11 +1,17 @@
-import { Menu, Wallet, Sun, Moon } from 'lucide-react';
+import { Menu, Wallet, Sun, Moon, Bot } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import UserMenu from '../ui/UserMenu';
 
 export default function TopBar({ onMenuClick, title, children }) {
   const { theme, toggleTheme } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const section = location.pathname.startsWith('/rooms/')
+    ? 'Group workspace'
+    : location.pathname.startsWith('/copilot') || location.pathname.startsWith('/forecasts') || location.pathname.startsWith('/insights')
+      ? 'AI'
+      : 'Personal';
 
   return (
     <header className="sticky top-0 z-30 flex items-center h-14 px-4 gap-3 bg-dark-900/80 backdrop-blur-xl border-b border-white/5">
@@ -28,17 +34,21 @@ export default function TopBar({ onMenuClick, title, children }) {
       </div>
 
       {/* Page Title Context (e.g. Room Name) */}
-      {title && (
-        <span className="hidden sm:inline font-semibold text-white bg-white/10 px-3 py-1 rounded-full text-xs ml-2">
-          {title}
-        </span>
-      )}
+      <div className="hidden min-w-0 sm:block">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500">{section}</p>
+        {title && <p className="truncate text-sm font-semibold text-white">{title}</p>}
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Contextual children (Action buttons like Export, Add) */}
       {children}
+
+      <button onClick={() => navigate('/copilot')} className="btn-secondary hidden text-xs sm:flex" title="AI Copilot">
+        <Bot className="h-4 w-4 text-purple-300" />
+        Copilot
+      </button>
 
       {/* Theme Toggle */}
       <button onClick={toggleTheme} className="btn-icon ml-1" title="Đổi theme">

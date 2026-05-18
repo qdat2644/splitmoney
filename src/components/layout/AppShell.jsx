@@ -25,7 +25,7 @@ export default function AppShell({ children, topBarTitle, topBarActions, mode = 
         >
           {topBarActions}
         </TopBar>
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+        <main className="flex-1 overflow-auto p-4 pb-20 sm:p-6 sm:pb-8">
           {children}
         </main>
       </div>

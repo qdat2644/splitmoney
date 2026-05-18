@@ -1,6 +1,5 @@
-// App.jsx — Root application component
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, Link } from 'react-router-dom';
 
 import AppShell from './components/layout/AppShell';
 import RoomTopBarActions from './components/layout/RoomTopBarActions';
@@ -13,18 +12,21 @@ import AddExpenseModal from './components/expenses/AddExpenseModal';
 import AuthScreen from './pages/AuthScreen';
 import RoomList from './pages/rooms/RoomList';
 import PersonalDashboard from './pages/PersonalDashboard';
-const PlansPage  = lazy(() => import('./pages/PlansPage'));
-const BudgetPage = lazy(() => import('./pages/BudgetPage'));
 import { useApp } from './context/AppContext';
 import { useAuth } from './context/AuthContext';
 import ToastContainer from './components/ui/Toast';
 
-import { Navigate, useParams, Link } from 'react-router-dom';
+const PlansPage = lazy(() => import('./pages/PlansPage'));
+const BudgetPage = lazy(() => import('./pages/BudgetPage'));
+const AICopilotPage = lazy(() => import('./pages/AICopilotPage'));
+const ForecastsPage = lazy(() => import('./pages/ForecastsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 function PageFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark-900">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+    <div className="flex min-h-screen items-center justify-center bg-dark-900">
+      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
     </div>
   );
 }
@@ -41,12 +43,12 @@ function RoomGuard({ children }) {
           roomId: 'local',
           role: 'owner',
           status: 'approved',
-          room: { name: 'Dữ liệu cũ (Local)', code: 'OFFLINE' }
+          room: { name: 'Du lieu cu (Local)', code: 'OFFLINE' },
         });
         return;
       }
 
-      const membership = rooms.find(m => m.roomId === roomId);
+      const membership = rooms.find((item) => item.roomId === roomId);
       if (membership) {
         if (!currentRoom || currentRoom.roomId !== roomId) {
           setCurrentRoom(membership);
@@ -59,26 +61,26 @@ function RoomGuard({ children }) {
 
   if (loadingRooms) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex min-h-screen items-center justify-center bg-dark-900">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
       </div>
     );
   }
 
   if (!currentRoom || currentRoom.roomId !== roomId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-dark-900 text-white">
-        <h2 className="text-xl font-bold mb-4">Phòng không tồn tại hoặc bạn chưa tham gia</h2>
-        <Link to="/rooms" className="text-blue-400 hover:underline">Về danh sách phòng</Link>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-dark-900 text-white">
+        <h2 className="mb-4 text-xl font-bold">Phong khong ton tai hoac ban chua tham gia</h2>
+        <Link to="/rooms" className="text-blue-400 hover:underline">Ve danh sach phong</Link>
       </div>
     );
   }
 
   if (currentRoom.status === 'pending') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-dark-900 text-white">
-        <h2 className="text-xl font-bold mb-4 text-yellow-400">Bạn đang chờ được duyệt vào phòng này</h2>
-        <Link to="/rooms" className="text-blue-400 hover:underline">Về danh sách phòng</Link>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-dark-900 text-white">
+        <h2 className="mb-4 text-xl font-bold text-yellow-400">Ban dang cho duoc duyet vao phong nay</h2>
+        <Link to="/rooms" className="text-blue-400 hover:underline">Ve danh sach phong</Link>
       </div>
     );
   }
@@ -86,14 +88,19 @@ function RoomGuard({ children }) {
   return children;
 }
 
-function AppRoutes() {
+function AdminGuard({ children }) {
+  const { user } = useAuth();
+  return user?.role === 'admin' ? children : <Navigate to="/" replace />;
+}
+
+function RoomRoutes() {
   const { loadingRoom, currentRoom } = useApp();
   const [expenseModal, setExpenseModal] = useState({ open: false, editData: null });
 
   if (loadingRoom) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex min-h-screen items-center justify-center bg-dark-900">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-500" />
       </div>
     );
   }
@@ -113,11 +120,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
 
-      <AddExpenseModal
-        open={expenseModal.open}
-        onClose={closeModal}
-        editData={expenseModal.editData}
-      />
+      <AddExpenseModal open={expenseModal.open} onClose={closeModal} editData={expenseModal.editData} />
     </AppShell>
   );
 }
@@ -126,18 +129,20 @@ function AppContent() {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-
-  if (!user) {
-    return <AuthScreen />;
-  }
+  if (!user) return <AuthScreen />;
 
   return (
     <Routes>
-      <Route path="/" element={<AppShell mode="global" topBarTitle="Dashboard"><PersonalDashboard /></AppShell>} />
-      <Route path="/rooms" element={<AppShell mode="global" topBarTitle="Phòng của bạn"><RoomList /></AppShell>} />
-      <Route path="/plans" element={<AppShell mode="global" topBarTitle="Kế hoạch"><Suspense fallback={<PageFallback />}><PlansPage /></Suspense></AppShell>} />
-      <Route path="/budget" element={<AppShell mode="global" topBarTitle="Ngân sách"><Suspense fallback={<PageFallback />}><BudgetPage /></Suspense></AppShell>} />
-      <Route path="/rooms/:roomId/*" element={<RoomGuard><AppRoutes /></RoomGuard>} />
+      <Route path="/" element={<AppShell mode="global" topBarTitle="Home"><PersonalDashboard /></AppShell>} />
+      <Route path="/insights" element={<AppShell mode="global" topBarTitle="Insights"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
+      <Route path="/rooms" element={<AppShell mode="global" topBarTitle="Rooms"><RoomList /></AppShell>} />
+      <Route path="/plans" element={<AppShell mode="global" topBarTitle="Smart Planning"><Suspense fallback={<PageFallback />}><PlansPage /></Suspense></AppShell>} />
+      <Route path="/budget" element={<AppShell mode="global" topBarTitle="Budgets"><Suspense fallback={<PageFallback />}><BudgetPage /></Suspense></AppShell>} />
+      <Route path="/copilot" element={<AppShell mode="global" topBarTitle="AI Copilot"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
+      <Route path="/forecasts" element={<AppShell mode="global" topBarTitle="Forecasts"><Suspense fallback={<PageFallback />}><ForecastsPage /></Suspense></AppShell>} />
+      <Route path="/settings" element={<AppShell mode="global" topBarTitle="Settings"><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AppShell>} />
+      <Route path="/admin" element={<AdminGuard><AppShell mode="global" topBarTitle="Admin"><Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense></AppShell></AdminGuard>} />
+      <Route path="/rooms/:roomId/*" element={<RoomGuard><RoomRoutes /></RoomGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Wallet, CalendarDays, TrendingUp, DoorOpen,
-  AlertCircle, RefreshCw, Plus, LogOut, PiggyBank, Map
+  AlertCircle, RefreshCw, Plus, LogOut, PiggyBank, Map, Bot, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardSummary } from '../hooks/useDashboardSummary';
@@ -124,6 +124,23 @@ export default function PersonalDashboard() {
                     />
                   </div>
                 </div>
+
+                <AppCard className="overflow-hidden p-0">
+                  <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-4 w-4 text-purple-300" />
+                        <p className="text-sm font-semibold text-white">AI workspace</p>
+                      </div>
+                      <p className="mt-1 max-w-2xl text-sm text-gray-400">
+                        Review insights, open planning shortcuts, and inspect forecasts from one place.
+                      </p>
+                    </div>
+                    <AppButton onClick={() => navigate('/copilot')} icon={ArrowRight}>
+                      Open Copilot
+                    </AppButton>
+                  </div>
+                </AppCard>
 
                 {/* ── Row 2: Category + Room breakdown ── */}
                 <div className="grid md:grid-cols-2 gap-4">
