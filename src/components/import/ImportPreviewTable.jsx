@@ -78,7 +78,7 @@ export default function ImportPreviewTable({ rows, selectedRows, onToggle }) {
 
 function StatusBadge({ row }) {
   const config = {
-    valid: { label: 'Hợp lệ', className: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
+    valid: { label: 'Sẵn sàng', className: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
     warning: { label: 'Cần kiểm tra', className: 'text-amber-400 bg-amber-500/10 border-amber-500/20', icon: AlertTriangle },
     error: { label: 'Lỗi chặn', className: 'text-red-400 bg-red-500/10 border-red-500/20', icon: XCircle },
     skipped: { label: 'Đã bỏ qua', className: 'text-gray-400 bg-white/5 border-white/10', icon: CircleSlash },

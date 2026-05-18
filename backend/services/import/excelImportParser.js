@@ -483,7 +483,6 @@ function isExplicitTitle(value) {
   const normalized = normalizeHeader(value);
   return Boolean(getString(value))
     && !looksLikeStandaloneAmount(value)
-    && !SEPARATOR_RE.test(getString(value))
     && !SUMMARY_TERMS.includes(normalized);
 }
 

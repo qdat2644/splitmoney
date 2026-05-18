@@ -56,7 +56,7 @@ export default function ImportExcelModal({ open, onClose }) {
     try {
       const data = await importApi.previewRoomImport(currentRoom.roomId, file);
       setPreview(data);
-      setSelectedRows(data.rows.filter((row) => row.status === 'valid' || row.status === 'warning').map((row) => row.rowIndex));
+      setSelectedRows(data.rows.filter(isImportableRow).map((row) => row.rowIndex));
       setMappings(buildInitialMappings(data.members));
       setStep(1);
     } catch (error) {
@@ -206,6 +206,10 @@ function StepBar({ step }) {
       ))}
     </div>
   );
+}
+
+function isImportableRow(row) {
+  return row.status === 'valid' || row.status === 'warning';
 }
 
 function buildInitialMappings(detectedMembers) {

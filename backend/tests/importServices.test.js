@@ -144,6 +144,19 @@ describe('room-scoped excel import services', () => {
     expect(row.participantSourceNames).toEqual(['Đạt']);
   });
 
+  it('preserves terse explicit titles on otherwise valid legacy expense rows', () => {
+    const analysis = analyzeWorksheetRows([
+      ['Giao Dịch', 'Số Tiền', 'Chi Bởi', 'Ngày Chi', 'Trà', '', 'Đạt', '', 'Tuấn', ''],
+      ['', '', '', '', 'Chi', 'Nợ', 'Chi', 'Nợ', 'Chi', 'Nợ'],
+      ['..', '33,000 đ', 'Đạt', '08/05/2026', '-', '-11,000 đ', '33,000 đ', '-11,000 đ', '-', '-11,000 đ'],
+    ], { memberNames: ['Trà', 'Đạt', 'Tuấn'] });
+    const row = analysis.rows.find((item) => item.status !== 'skipped');
+
+    expect(row.title).toBe('..');
+    expect(row.amount).toBe(33000);
+    expect(row.participantSourceNames).toEqual(['Trà', 'Đạt', 'Tuấn']);
+  });
+
   it('downgrades recoverable missing title and participant issues to warnings', () => {
     const [row] = validatePreviewRows([{
       ...baseRow(),
