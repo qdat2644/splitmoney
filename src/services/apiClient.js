@@ -2,9 +2,8 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
   const token = localStorage.getItem('spliteasy_token');
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -19,9 +18,7 @@ export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
     },
   };
 
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
+  if (body) config.body = isFormData ? body : JSON.stringify(body);
 
   const response = await fetch(`${API_URL}${endpoint}`, config);
   
@@ -115,4 +112,13 @@ export const planApi = {
 export const exportApi = {
   exportRoom: (roomId, format = 'json') => apiClient(`/export/rooms/${roomId}?format=${format}`),
   exportMe:   (format = 'json')         => apiClient(`/export/me?format=${format}`),
+};
+
+export const importApi = {
+  previewRoomImport: (roomId, file) => {
+    const body = new FormData();
+    body.append('file', file);
+    return apiClient(`/rooms/${roomId}/import/preview`, { body });
+  },
+  commitRoomImport: (roomId, data) => apiClient(`/rooms/${roomId}/import/commit`, { body: data }),
 };

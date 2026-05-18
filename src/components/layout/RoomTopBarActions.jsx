@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Plus, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Upload } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { exportExpensesToCsv } from '../../utils/exportCsv';
 import { useApp } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
+import ImportExcelModal from '../import/ImportExcelModal';
 
 export default function RoomTopBarActions({ onAddExpense }) {
-  const { stats, expenses, members, toast } = useApp();
+  const { stats, expenses, members, toast, currentRoom } = useApp();
   const navigate = useNavigate();
+  const [importOpen, setImportOpen] = useState(false);
 
   const handleExport = () => {
     exportExpensesToCsv(expenses, members);
@@ -16,9 +19,9 @@ export default function RoomTopBarActions({ onAddExpense }) {
 
   return (
     <div className="flex items-center gap-2">
-      <button 
-        onClick={() => navigate('/rooms')} 
-        className="btn-icon h-8 w-8 text-gray-400 border border-transparent" 
+      <button
+        onClick={() => navigate('/rooms')}
+        className="btn-icon h-8 w-8 text-gray-400 border border-transparent"
         title="Quay lại danh sách phòng"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
@@ -30,19 +33,28 @@ export default function RoomTopBarActions({ onAddExpense }) {
         className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-dark-900 border border-white/5 text-xs shadow-sm"
       >
         <span className="text-[11px] font-medium text-gray-500">Tổng chi</span>
-        <span className="font-semibold text-gray-200">
-          {formatCurrency(stats.totalExpenses, true)}
-        </span>
+        <span className="font-semibold text-gray-200">{formatCurrency(stats.totalExpenses, true)}</span>
       </motion.div>
 
-      <button 
-        onClick={handleExport} 
-        className="btn-secondary h-8 px-2.5 text-xs font-medium flex items-center gap-1 border border-white/5 bg-white/[0.01]" 
-        title="Xuất CSV"
+      <button
+        onClick={handleExport}
+        className="btn-secondary h-8 px-2.5 text-xs font-medium flex items-center gap-1 border border-white/5 bg-white/[0.01]"
+        title="Xuất dữ liệu"
       >
         <Download className="w-3.5 h-3.5" />
-        <span className="hidden md:inline">Xuất CSV</span>
+        <span className="hidden md:inline">Xuất dữ liệu</span>
       </button>
+
+      {currentRoom?.roomId !== 'local' && (
+        <button
+          onClick={() => setImportOpen(true)}
+          className="btn-secondary h-8 px-2.5 text-xs font-medium flex items-center gap-1 border border-white/5 bg-white/[0.01]"
+          title="Nhập dữ liệu"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Nhập dữ liệu</span>
+        </button>
+      )}
 
       <motion.button
         whileTap={{ scale: 0.98 }}
@@ -52,6 +64,8 @@ export default function RoomTopBarActions({ onAddExpense }) {
         <Plus className="w-3.5 h-3.5" />
         <span>Thêm chi phí</span>
       </motion.button>
+
+      {currentRoom?.roomId !== 'local' && <ImportExcelModal open={importOpen} onClose={() => setImportOpen(false)} />}
     </div>
   );
 }

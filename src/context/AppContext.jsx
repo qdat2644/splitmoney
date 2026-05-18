@@ -384,12 +384,13 @@ export function AppProvider({ children }) {
     addPayment, deletePayment,
     toggleTheme,
     setMembers,
+    setExpenses,
   }), [
     members, expenses, payments, balances, settlements, stats, theme,
     user, currentRoom, rooms, loadingRoom,
     toasts, removeToast, toast,
     addExpense, updateExpense, deleteExpense, removeMember, approveMember, rejectMember,
-    addPayment, deletePayment, setMembers
+    addPayment, deletePayment, setMembers, setExpenses
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

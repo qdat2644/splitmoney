@@ -1,6 +1,8 @@
 export const safeLower = (value) => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
+  .replace(/đ/g, 'd')
+  .replace(/Đ/g, 'd')
   .toLowerCase()
   .trim();
 

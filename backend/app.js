@@ -14,6 +14,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import budgetRoutes from './routes/budgetRoutes.js';
 import planRoutes from './routes/planRoutes.js';
 import exportRoutes from './routes/exportRoutes.js';
+import importRoutes from './routes/importRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import { env } from './config/env.js';
 import { corsOptions } from './config/cors.js';
@@ -48,6 +49,7 @@ export function createApp() {
   app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/rooms', roomRoutes);
   app.use('/api/rooms/:roomId/expenses', expenseRoutes);
+  app.use('/api/rooms/:roomId/import', importRoutes);
   app.use('/api/rooms/:roomId/guests', guestRoutes);
   app.use('/api/rooms/:roomId/payments', paymentRoutes);
   app.use('/api/rooms/:roomId/ai', aiLimiter, aiRoutes);

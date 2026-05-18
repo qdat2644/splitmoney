@@ -1,45 +1,11 @@
-// expenseController.js — Handles expense CRUD with unified split type support
+// expenseController.js - Handles expense CRUD with unified split type support
 import prisma from '../utils/db.js';
-import { resolveShares } from '../utils/settlement.js';
 import { invalidateProfileCache } from '../services/intelligence/personalFinanceProfileService.js';
-
-// ── Room identity helpers ─────────────────────────────────────────────────────
-
-async function getRoomIdentities(roomId) {
-  const [roomMembers, guestMembers] = await Promise.all([
-    prisma.roomMember.findMany({ where: { roomId, status: 'approved' } }),
-    prisma.guestMember.findMany({ where: { roomId, status: { not: 'removed' } } }),
-  ]);
-  return {
-    validUserIds:  new Set(roomMembers.map(m => m.userId)),
-    validGuestIds: new Set(guestMembers.map(g => g.id)),
-  };
-}
-
-// ── Participant resolution ────────────────────────────────────────────────────
-
-/**
- * Convert raw frontend participant list into validated DB rows using canonical share amounts.
- * Supports equal | exact | percentage split types.
- */
-function buildParticipantRows(participants, amount, splitType, validUserIds, validGuestIds) {
-  // Validate identities
-  for (const p of participants) {
-    if (p.userId      && !validUserIds.has(p.userId))      throw Object.assign(new Error('Người tham gia không thuộc phòng này.'), { status: 400 });
-    if (p.guestMemberId && !validGuestIds.has(p.guestMemberId)) throw Object.assign(new Error('Khách tham gia không thuộc phòng này.'), { status: 400 });
-  }
-
-  // Resolve shares using canonical engine
-  const withShares = resolveShares(amount, splitType, participants);
-
-  return withShares.map(p => ({
-    userId:        p.userId        || null,
-    guestMemberId: p.guestMemberId || null,
-    shareAmount:   p.shareAmount,
-  }));
-}
-
-// ── GET /expenses ─────────────────────────────────────────────────────────────
+import {
+  buildParticipantRows,
+  createExpenseForRoom,
+  getRoomIdentities,
+} from '../services/expenseWriteService.js';
 
 export const getExpenses = async (req, res) => {
   try {
@@ -48,7 +14,7 @@ export const getExpenses = async (req, res) => {
       where: { roomId },
       include: {
         participants: true,
-        paidByUser:  { select: { id: true, name: true } },
+        paidByUser: { select: { id: true, name: true } },
         paidByGuest: { select: { id: true, displayName: true } },
       },
       orderBy: { date: 'desc' },
@@ -59,112 +25,72 @@ export const getExpenses = async (req, res) => {
   }
 };
 
-// ── POST /expenses ────────────────────────────────────────────────────────────
-
 export const addExpense = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const {
-      title, amount, category, note,
-      splitType = 'equal',
-      paidByUserId, paidByGuestMemberId,
-      date, participants,
-    } = req.body;
-    const createdByUserId = req.user.userId;
-
-    // Basic validation
-    if (!paidByUserId && !paidByGuestMemberId)
-      return res.status(400).json({ error: 'Vui lòng chọn người trả.' });
-    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0)
-      return res.status(400).json({ error: 'Số tiền không hợp lệ.' });
-    if (!participants || participants.length === 0)
-      return res.status(400).json({ error: 'Cần có ít nhất một người tham gia.' });
-
-    const { validUserIds, validGuestIds } = await getRoomIdentities(roomId);
-
-    if (paidByUserId        && !validUserIds.has(paidByUserId))        return res.status(400).json({ error: 'Người trả không thuộc phòng này.' });
-    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) return res.status(400).json({ error: 'Khách trả tiền không hợp lệ.' });
-
-    let participantRows;
-    try {
-      participantRows = buildParticipantRows(participants, amount, splitType, validUserIds, validGuestIds);
-    } catch (err) {
-      return res.status(400).json({ error: err.message });
-    }
-
-    const expense = await prisma.expense.create({
-      data: {
-        roomId,
-        title,
-        amount,
-        category: category || 'other',
-        note:     note     || null,
-        splitType,
-        paidByUserId:        paidByUserId        || null,
-        paidByGuestMemberId: paidByGuestMemberId || null,
-        createdByUserId,
-        date: new Date(date),
-        participants: { create: participantRows },
-      },
-      include: { participants: true },
+    const expense = await createExpenseForRoom({
+      roomId,
+      createdByUserId: req.user.userId,
+      ...req.body,
     });
-
-    if (paidByUserId) invalidateProfileCache(paidByUserId).catch(() => {});
-    participants.forEach(p => {
-      if (p.userId) invalidateProfileCache(p.userId).catch(() => {});
-    });
-
     res.status(201).json({ expense });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể tạo khoản chi lúc này.' });
+    res.status(error.status || 500).json({
+      error: error.status ? error.message : 'Không thể tạo khoản chi lúc này.',
+    });
   }
 };
-
-// ── PUT /expenses/:expenseId ──────────────────────────────────────────────────
 
 export const updateExpense = async (req, res) => {
   try {
     const { roomId, expenseId } = req.params;
     const {
-      title, amount, category, note,
+      title,
+      amount,
+      category,
+      note,
       splitType = 'equal',
-      paidByUserId, paidByGuestMemberId,
-      date, participants,
+      paidByUserId,
+      paidByGuestMemberId,
+      date,
+      participants,
     } = req.body;
 
     const existingExpense = await prisma.expense.findUnique({ where: { id: expenseId } });
-    if (!existingExpense || existingExpense.roomId !== roomId)
+    if (!existingExpense || existingExpense.roomId !== roomId) {
       return res.status(404).json({ error: 'Không tìm thấy khoản chi.' });
-    if (!paidByUserId && !paidByGuestMemberId)
-      return res.status(400).json({ error: 'Vui lòng chọn người trả.' });
-    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0)
+    }
+    if (!paidByUserId && !paidByGuestMemberId) return res.status(400).json({ error: 'Vui lòng chọn người trả.' });
+    if (typeof amount !== 'number' || Number.isNaN(amount) || amount <= 0) {
       return res.status(400).json({ error: 'Số tiền không hợp lệ.' });
-    if (!participants || participants.length === 0)
+    }
+    if (!participants || participants.length === 0) {
       return res.status(400).json({ error: 'Cần có ít nhất một người tham gia.' });
+    }
 
     const { validUserIds, validGuestIds } = await getRoomIdentities(roomId);
-
-    if (paidByUserId        && !validUserIds.has(paidByUserId))        return res.status(400).json({ error: 'Người trả không hợp lệ.' });
-    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) return res.status(400).json({ error: 'Khách trả tiền không hợp lệ.' });
+    if (paidByUserId && !validUserIds.has(paidByUserId)) return res.status(400).json({ error: 'Người trả không hợp lệ.' });
+    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) {
+      return res.status(400).json({ error: 'Khách trả tiền không hợp lệ.' });
+    }
 
     let participantRows;
     try {
       participantRows = buildParticipantRows(participants, amount, splitType, validUserIds, validGuestIds);
-    } catch (err) {
-      return res.status(400).json({ error: err.message });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
     }
 
     await prisma.expenseParticipant.deleteMany({ where: { expenseId } });
-
     const expense = await prisma.expense.update({
       where: { id: expenseId },
       data: {
         title,
         amount,
         category: category || 'other',
-        note:     note     || null,
+        note: note || null,
         splitType,
-        paidByUserId:        paidByUserId        || null,
+        paidByUserId: paidByUserId || null,
         paidByGuestMemberId: paidByGuestMemberId || null,
         date: date ? new Date(date) : undefined,
         participants: { create: participantRows },
@@ -173,8 +99,8 @@ export const updateExpense = async (req, res) => {
     });
 
     if (paidByUserId) invalidateProfileCache(paidByUserId).catch(() => {});
-    participants.forEach(p => {
-      if (p.userId) invalidateProfileCache(p.userId).catch(() => {});
+    participants.forEach((participant) => {
+      if (participant.userId) invalidateProfileCache(participant.userId).catch(() => {});
     });
 
     res.json({ expense });
@@ -183,26 +109,20 @@ export const updateExpense = async (req, res) => {
   }
 };
 
-// ── DELETE /expenses/:expenseId ───────────────────────────────────────────────
-
 export const deleteExpense = async (req, res) => {
   try {
     const { roomId, expenseId } = req.params;
     const expense = await prisma.expense.findUnique({
       where: { id: expenseId },
-      include: { participants: true }
+      include: { participants: true },
     });
-    if (!expense || expense.roomId !== roomId)
-      return res.status(404).json({ error: 'Không tìm thấy khoản chi.' });
+    if (!expense || expense.roomId !== roomId) return res.status(404).json({ error: 'Không tìm thấy khoản chi.' });
 
     await prisma.expense.delete({ where: { id: expenseId } });
-
-    if (expense) {
-      if (expense.paidByUserId) invalidateProfileCache(expense.paidByUserId).catch(() => {});
-      expense.participants.forEach(p => {
-        if (p.userId) invalidateProfileCache(p.userId).catch(() => {});
-      });
-    }
+    if (expense.paidByUserId) invalidateProfileCache(expense.paidByUserId).catch(() => {});
+    expense.participants.forEach((participant) => {
+      if (participant.userId) invalidateProfileCache(participant.userId).catch(() => {});
+    });
 
     res.json({ success: true });
   } catch (error) {
