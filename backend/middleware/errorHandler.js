@@ -2,7 +2,7 @@ import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 export function notFoundHandler(req, res) {
-  res.status(404).json({ error: true, message: 'Not found', code: 'NOT_FOUND' });
+  res.status(404).json({ error: true, message: 'Không tìm thấy nội dung.', code: 'NOT_FOUND' });
 }
 
 export function errorHandler(err, req, res, next) {

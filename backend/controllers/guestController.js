@@ -61,7 +61,7 @@ export const updateGuest = async (req, res) => {
 
     // Fetch current guest to check claimed status
     const existing = await prisma.guestMember.findUnique({ where: { id: guestId } });
-    if (!existing || existing.roomId !== roomId) return res.status(404).json({ error: 'Guest not found' });
+    if (!existing || existing.roomId !== roomId) return res.status(404).json({ error: 'Không tìm thấy thành viên ảo.' });
 
     // Lock: claimed guests cannot be renamed
     if (existing.status === 'claimed' || existing.claimedByUserId) {
@@ -91,7 +91,7 @@ export const deleteGuest = async (req, res) => {
   try {
     const { roomId, guestId } = req.params;
     const existing = await prisma.guestMember.findUnique({ where: { id: guestId } });
-    if (!existing || existing.roomId !== roomId) return res.status(404).json({ error: 'Guest not found' });
+    if (!existing || existing.roomId !== roomId) return res.status(404).json({ error: 'Không tìm thấy thành viên ảo.' });
     
     // Check if guest has expenses
     const expenses = await prisma.expenseParticipant.findFirst({

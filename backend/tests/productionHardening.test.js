@@ -15,7 +15,7 @@ describe('production hardening regression', () => {
     const response = await request(app).get('/api/not-real').expect(404);
     expect(response.headers['x-powered-by']).toBeUndefined();
     expect(response.headers['x-content-type-options']).toBe('nosniff');
-    expect(response.body).toEqual({ error: true, message: 'Not found', code: 'NOT_FOUND' });
+    expect(response.body).toEqual({ error: true, message: 'Không tìm thấy nội dung.', code: 'NOT_FOUND' });
   });
 
   it('rejects oversized json payloads', async () => {

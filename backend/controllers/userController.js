@@ -1,6 +1,7 @@
 // userController.js
 import { buildPersonalSummary } from '../services/personalSummaryService.js';
 import { buildPersonalInsights } from '../services/personalInsightService.js';
+import { buildCopilotWorkspace } from '../services/copilot/copilotEngine.js';
 
 export const getPersonalSummary = async (req, res) => {
   try {
@@ -9,7 +10,7 @@ export const getPersonalSummary = async (req, res) => {
     res.json(summary);
   } catch (error) {
     console.error('userController.getPersonalSummary error:', error);
-    res.status(500).json({ error: error.message || 'Failed to build personal summary' });
+    res.status(500).json({ error: 'Không thể tải tổng quan cá nhân.' });
   }
 };
 
@@ -20,6 +21,15 @@ export const getPersonalInsights = async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('userController.getPersonalInsights error:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate insights' });
+    res.status(500).json({ error: 'Không thể tạo phân tích lúc này.' });
+  }
+};
+
+export const getCopilotWorkspace = async (req, res) => {
+  try {
+    res.json(await buildCopilotWorkspace(req.user.userId));
+  } catch (error) {
+    console.error('userController.getCopilotWorkspace error:', error);
+    res.status(500).json({ error: 'Không thể tải không gian trợ lý AI.' });
   }
 };

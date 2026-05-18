@@ -337,6 +337,7 @@ function CreatePlanModal({ onClose, onCreate }) {
 import { planApi } from '../services/apiClient';
 import AIPlanGeneratorPanel from '../components/plans/AIPlanGeneratorPanel';
 import AIPlanBoard from '../components/plans/AIPlanBoard';
+import ContextualCopilotPanel from '../components/copilot/ContextualCopilotPanel';
 
 export default function PlansPage() {
   const { user, logout } = useAuth();
@@ -514,6 +515,11 @@ export default function PlansPage() {
           {aiResult && <AIPlanBoard planData={aiResult} onSaveToPlan={handleSaveAIPlan} onDiscard={() => setAiResult(null)} />}
         </AnimatePresence>
 
+        <ContextualCopilotPanel
+          title="Theo dõi kế hoạch"
+          types={['budget_risk', 'spending_velocity']}
+        />
+
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SkeletonCard />
@@ -547,7 +553,7 @@ export default function PlansPage() {
           <div className="space-y-5">
             {activePlans.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Đang hoạt động</h2>
+                <h2 className="mb-2 text-xs font-medium text-blue-400">Đang hoạt động</h2>
                 <div className="space-y-3">
                   <AnimatePresence mode="popLayout">
                     {activePlans.map(p => (
@@ -568,7 +574,7 @@ export default function PlansPage() {
             )}
             {draftPlans.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Bản nháp</h2>
+                <h2 className="mb-2 text-xs font-medium text-gray-400">Bản nháp</h2>
                 <div className="space-y-3">
                   <AnimatePresence mode="popLayout">
                     {draftPlans.map(p => (
@@ -589,7 +595,7 @@ export default function PlansPage() {
             )}
             {completedPlans.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold text-emerald-400/60 uppercase tracking-wider mb-2">Hoàn thành / Lưu trữ</h2>
+                <h2 className="mb-2 text-xs font-medium text-emerald-400/60">Hoàn thành / Lưu trữ</h2>
                 <div className="space-y-3">
                   <AnimatePresence mode="popLayout">
                     {completedPlans.map(p => (

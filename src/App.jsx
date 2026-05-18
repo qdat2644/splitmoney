@@ -43,7 +43,7 @@ function RoomGuard({ children }) {
           roomId: 'local',
           role: 'owner',
           status: 'approved',
-          room: { name: 'Du lieu cu (Local)', code: 'OFFLINE' },
+          room: { name: 'Dữ liệu cũ (Local)', code: 'OFFLINE' },
         });
         return;
       }
@@ -70,8 +70,8 @@ function RoomGuard({ children }) {
   if (!currentRoom || currentRoom.roomId !== roomId) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-dark-900 text-white">
-        <h2 className="mb-4 text-xl font-bold">Phong khong ton tai hoac ban chua tham gia</h2>
-        <Link to="/rooms" className="text-blue-400 hover:underline">Ve danh sach phong</Link>
+        <h2 className="mb-4 text-xl font-bold">Phòng không tồn tại hoặc bạn chưa tham gia</h2>
+        <Link to="/rooms" className="text-blue-400 hover:underline">Về danh sách phòng</Link>
       </div>
     );
   }
@@ -79,8 +79,8 @@ function RoomGuard({ children }) {
   if (currentRoom.status === 'pending') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-dark-900 text-white">
-        <h2 className="mb-4 text-xl font-bold text-yellow-400">Ban dang cho duoc duyet vao phong nay</h2>
-        <Link to="/rooms" className="text-blue-400 hover:underline">Ve danh sach phong</Link>
+        <h2 className="mb-4 text-xl font-bold text-yellow-400">Bạn đang chờ được duyệt vào phòng này</h2>
+        <Link to="/rooms" className="text-blue-400 hover:underline">Về danh sách phòng</Link>
       </div>
     );
   }
@@ -133,15 +133,15 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<AppShell mode="global" topBarTitle="Home"><PersonalDashboard /></AppShell>} />
-      <Route path="/insights" element={<AppShell mode="global" topBarTitle="Insights"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
-      <Route path="/rooms" element={<AppShell mode="global" topBarTitle="Rooms"><RoomList /></AppShell>} />
-      <Route path="/plans" element={<AppShell mode="global" topBarTitle="Smart Planning"><Suspense fallback={<PageFallback />}><PlansPage /></Suspense></AppShell>} />
-      <Route path="/budget" element={<AppShell mode="global" topBarTitle="Budgets"><Suspense fallback={<PageFallback />}><BudgetPage /></Suspense></AppShell>} />
-      <Route path="/copilot" element={<AppShell mode="global" topBarTitle="AI Copilot"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
-      <Route path="/forecasts" element={<AppShell mode="global" topBarTitle="Forecasts"><Suspense fallback={<PageFallback />}><ForecastsPage /></Suspense></AppShell>} />
-      <Route path="/settings" element={<AppShell mode="global" topBarTitle="Settings"><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AppShell>} />
-      <Route path="/admin" element={<AdminGuard><AppShell mode="global" topBarTitle="Admin"><Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense></AppShell></AdminGuard>} />
+      <Route path="/" element={<AppShell mode="global" topBarTitle="Tổng quan"><PersonalDashboard /></AppShell>} />
+      <Route path="/insights" element={<AppShell mode="global" topBarTitle="Phân tích"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
+      <Route path="/rooms" element={<AppShell mode="global" topBarTitle="Phòng"><RoomList /></AppShell>} />
+      <Route path="/plans" element={<AppShell mode="global" topBarTitle="Kế hoạch"><Suspense fallback={<PageFallback />}><PlansPage /></Suspense></AppShell>} />
+      <Route path="/budget" element={<AppShell mode="global" topBarTitle="Ngân sách"><Suspense fallback={<PageFallback />}><BudgetPage /></Suspense></AppShell>} />
+      <Route path="/copilot" element={<AppShell mode="global" topBarTitle="Trợ lý AI"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
+      <Route path="/forecasts" element={<AppShell mode="global" topBarTitle="Dự báo"><Suspense fallback={<PageFallback />}><ForecastsPage /></Suspense></AppShell>} />
+      <Route path="/settings" element={<AppShell mode="global" topBarTitle="Cài đặt"><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AppShell>} />
+      <Route path="/admin" element={<AdminGuard><AppShell mode="global" topBarTitle="Quản trị"><Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense></AppShell></AdminGuard>} />
       <Route path="/rooms/:roomId/*" element={<RoomGuard><RoomRoutes /></RoomGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -16,13 +16,13 @@ export const sendPasswordResetEmail = async (email, token) => {
   const resetLink = `http://localhost:5173/reset-password?token=${token}`;
   
   await transporter.sendMail({
-    from: '"SplitEasy" <noreply@spliteasy.com>',
+    from: '"Zyra" <noreply@zyra.app>',
     to: email,
-    subject: 'Password Reset Request',
+    subject: 'Đặt lại mật khẩu Zyra',
     html: `
-      <h2>Reset your password</h2>
-      <p>Click the link below to reset your password. This link expires in 1 hour.</p>
-      <a href="${resetLink}">Reset Password</a>
+      <h2>Đặt lại mật khẩu</h2>
+      <p>Nhấn vào liên kết bên dưới để đặt lại mật khẩu. Liên kết sẽ hết hạn sau 1 giờ.</p>
+      <a href="${resetLink}">Đặt lại mật khẩu</a>
     `,
   });
 };

@@ -6,7 +6,7 @@ export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logger.warn('auth_failed', { reason: 'missing_token' });
-    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    return res.status(401).json({ error: 'Bạn cần đăng nhập để tiếp tục.' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -16,6 +16,6 @@ export const requireAuth = (req, res, next) => {
     next();
   } catch (err) {
     logger.warn('auth_failed', { reason: 'invalid_token' });
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ.' });
   }
 };

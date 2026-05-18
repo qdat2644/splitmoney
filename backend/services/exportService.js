@@ -22,7 +22,7 @@ async function assertRoomAccess(roomId, userId) {
     where: { roomId_userId: { roomId, userId } },
   });
   if (!membership || membership.status !== 'approved')
-    throw Object.assign(new Error('Access denied: Not an approved member of this room.'), { status: 403 });
+    throw Object.assign(new Error('Bạn cần là thành viên đã duyệt của phòng này.'), { status: 403 });
 }
 
 // ── Room export ───────────────────────────────────────────────────────────────

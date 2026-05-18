@@ -31,7 +31,7 @@ export function exportExpensesToCsv(expenses, members) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `spliteasy_${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute('download', `zyra_${new Date().toISOString().split('T')[0]}.csv`);
   link.click();
   URL.revokeObjectURL(url);
 }

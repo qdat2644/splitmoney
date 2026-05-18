@@ -45,7 +45,7 @@ export default function UserMenu() {
   const menuItems = [
     {
       icon: LayoutDashboard,
-      label: 'Personal Dashboard',
+      label: 'Tổng quan cá nhân',
       onClick: () => { setDropdownOpen(false); navigate('/'); },
     },
     {
@@ -72,10 +72,10 @@ export default function UserMenu() {
 
   return (
     <>
-      <div className="relative ml-1" ref={dropdownRef}>
+      <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(v => !v)}
-          className="flex items-center gap-2 pl-2 border-l border-white/10 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none"
           aria-label="User menu"
         >
           <Avatar member={{ ...currentUser, colorIndex: 0 }} size="xs" />
@@ -85,15 +85,15 @@ export default function UserMenu() {
         <AnimatePresence>
           {dropdownOpen && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -8 }}
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -8 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-56 glass-card border border-white/10 shadow-2xl rounded-xl overflow-hidden z-50"
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.1 }}
+              className="absolute right-0 top-full mt-2 w-52 bg-dark-800 border border-white/5 shadow-lg rounded-lg overflow-hidden z-50"
             >
-              <div className="px-4 py-3 border-b border-white/5">
-                <p className="text-sm font-semibold text-white truncate">{currentUser.name}</p>
-                <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+              <div className="px-4 py-2.5 border-b border-white/5">
+                <p className="text-xs font-semibold text-white truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-gray-500 truncate">{currentUser.email}</p>
               </div>
 
               <div className="py-1">
@@ -102,7 +102,7 @@ export default function UserMenu() {
                     key={i}
                     onClick={item.onClick}
                     disabled={item.disabled}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                    className={`w-full flex items-center gap-2.5 px-4 py-2 text-xs transition-colors
                       ${item.danger
                         ? 'text-red-400 hover:bg-red-500/10'
                         : item.disabled
@@ -110,13 +110,8 @@ export default function UserMenu() {
                         : 'text-gray-200 hover:bg-white/5'
                       }`}
                   >
-                    <item.icon className={`w-4 h-4 shrink-0 ${item.danger ? 'text-red-400' : item.disabled ? 'text-gray-600' : 'text-gray-400'}`} />
+                    <item.icon className={`w-3.5 h-3.5 shrink-0 ${item.danger ? 'text-red-400' : item.disabled ? 'text-gray-600' : 'text-gray-400'}`} />
                     <span className="flex-1 text-left">{item.label}</span>
-                    {item.sublabel && item.disabled && (
-                      <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">
-                        {item.sublabel === currentUser?.email ? '' : item.sublabel}
-                      </span>
-                    )}
                   </button>
                 ))}
               </div>

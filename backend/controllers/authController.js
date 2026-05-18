@@ -9,10 +9,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
+    if (!name || !email || !password) return res.status(400).json({ error: 'Vui lòng nhập đầy đủ thông tin.' });
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) return res.status(400).json({ error: 'Email already exists' });
+    if (existingUser) return res.status(400).json({ error: 'Email này đã được sử dụng.' });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
@@ -23,7 +23,7 @@ export const register = async (req, res) => {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ user, token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể tạo tài khoản lúc này.' });
   }
 };
 
@@ -31,15 +31,15 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(400).json({ error: 'Email hoặc mật khẩu không đúng.' });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!valid) return res.status(400).json({ error: 'Email hoặc mật khẩu không đúng.' });
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể đăng nhập lúc này.' });
   }
 };
 
@@ -49,10 +49,10 @@ export const getMe = async (req, res) => {
       where: { id: req.user.userId },
       select: { id: true, name: true, email: true }
     });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
     res.json({ user });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể tải thông tin tài khoản.' });
   }
 };
 
@@ -60,7 +60,7 @@ export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.json({ message: 'If email exists, reset link sent.' }); // prevent enum
+    if (!user) return res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' }); // prevent enum
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
@@ -71,16 +71,16 @@ export const forgotPassword = async (req, res) => {
     });
 
     await sendPasswordResetEmail(email, resetToken);
-    res.json({ message: 'If email exists, reset link sent.' });
+    res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể xử lý yêu cầu đặt lại mật khẩu.' });
   }
 };
 
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
-    if (!token || !newPassword) return res.status(400).json({ error: 'Missing token or password' });
+    if (!token || !newPassword) return res.status(400).json({ error: 'Thiếu mã đặt lại hoặc mật khẩu mới.' });
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
@@ -106,7 +106,7 @@ export const resetPassword = async (req, res) => {
 
     res.json({ success: true, message: 'Đổi mật khẩu thành công' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể đặt lại mật khẩu lúc này.' });
   }
 };
 
@@ -123,7 +123,7 @@ export const changePassword = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) {
@@ -139,6 +139,6 @@ export const changePassword = async (req, res) => {
 
     res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể đổi mật khẩu lúc này.' });
   }
 };

@@ -132,10 +132,10 @@ export default function Analytics() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left px-5 py-3 text-xs text-gray-500 font-medium uppercase tracking-wide">Thành viên</th>
-                <th className="text-right px-5 py-3 text-xs text-gray-500 font-medium uppercase tracking-wide">Đã trả</th>
-                <th className="text-right px-5 py-3 text-xs text-gray-500 font-medium uppercase tracking-wide">Phần của mình</th>
-                <th className="text-right px-5 py-3 text-xs text-gray-500 font-medium uppercase tracking-wide">Số dư</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Thành viên</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Đã trả</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Phần của mình</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Số dư</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -156,7 +156,7 @@ export default function Analytics() {
                 );
               })}
               <tr className="bg-white/2">
-                <td className="px-5 py-3 text-gray-400 font-semibold text-xs uppercase tracking-wide">Tổng cộng</td>
+                <td className="px-5 py-3 text-xs font-semibold text-gray-400">Tổng cộng</td>
                 <td className="px-5 py-3 text-right text-white font-bold">{formatCurrency(stats.totalExpenses, true)}</td>
                 <td className="px-5 py-3 text-right text-gray-400">—</td>
                 <td className="px-5 py-3 text-right text-gray-500">—</td>

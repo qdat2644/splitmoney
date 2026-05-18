@@ -5,8 +5,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (summary.recentExpenses.length === 0) {
     return [{
       type: 'suggestion',
-      title: 'Bat dau theo doi chi tieu',
-      message: 'Ban chua co khoan chi nao de phan tich tai chinh.',
+      title: 'Bắt đầu theo dõi chi tiêu',
+      message: 'Bạn chưa có khoản chi nào để phân tích tài chính.',
       severity: 'info',
       confidence: 1,
     }];
@@ -18,8 +18,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (totalParticipated > 0 && foodTotal / totalParticipated > 0.4) {
     insights.push({
       type: 'warning',
-      title: 'Chi tieu an uong cao',
-      message: `An uong chiem ${Math.round((foodTotal / totalParticipated) * 100)}% tong chi tieu cua ban.`,
+      title: 'Chi tiêu ăn uống cao',
+      message: `Ăn uống chiếm ${Math.round((foodTotal / totalParticipated) * 100)}% tổng chi tiêu của bạn.`,
       severity: 'warning',
       confidence: 0.9,
     });
@@ -28,8 +28,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (summary.totalIOwe > summary.totalOwedToMe * 2 && summary.totalIOwe > 50000) {
     insights.push({
       type: 'debt',
-      title: 'No dang cao',
-      message: `Ban dang no ${(summary.totalIOwe / 1000).toFixed(0)}k, cao hon dang ke so voi so tien duoc no.`,
+      title: 'Công nợ đang cao',
+      message: `Bạn đang nợ ${(summary.totalIOwe / 1000).toFixed(0)}k, cao hơn đáng kể so với số tiền được nợ.`,
       severity: 'warning',
       confidence: 0.85,
     });
@@ -39,8 +39,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
     const topRisk = analytics.forecast.riskCategories[0];
     insights.push({
       type: 'warning',
-      title: 'Nguy co vuot ngan sach',
-      message: `Danh muc ${topRisk.category} co nguy co vuot han muc trong thang nay.`,
+      title: 'Nguy cơ vượt ngân sách',
+      message: `Danh mục ${formatCategoryLabel(topRisk.category)} có nguy cơ vượt hạn mức trong tháng này.`,
       severity: 'warning',
       confidence: analytics.forecast.confidence || 0.7,
     });
@@ -64,8 +64,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
     if (average > 0 && latest > average * 1.3) {
       insights.push({
         type: 'trend',
-        title: 'Chi tieu tang manh',
-        message: `Chi tieu thang nay cao hon trung binh gan day ${Math.round(((latest - average) / average) * 100)}%.`,
+        title: 'Chi tiêu tăng mạnh',
+        message: `Chi tiêu tháng này cao hơn trung bình gần đây ${Math.round(((latest - average) / average) * 100)}%.`,
         severity: 'warning',
         confidence: 0.8,
       });
@@ -75,12 +75,25 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (insights.length === 0) {
     insights.push({
       type: 'positive',
-      title: 'Tai chinh dang on dinh',
-      message: 'Du lieu hien tai chua cho thay rui ro lon bat thuong.',
+      title: 'Tài chính đang ổn định',
+      message: 'Dữ liệu hiện tại chưa cho thấy rủi ro lớn bất thường.',
       severity: 'positive',
       confidence: 0.7,
     });
   }
 
   return insights.slice(0, 5);
+}
+
+function formatCategoryLabel(category) {
+  return {
+    food: 'ăn uống',
+    drinks: 'đồ uống',
+    transport: 'di chuyển',
+    housing: 'lưu trú',
+    accommodation: 'lưu trú',
+    entertainment: 'giải trí',
+    shopping: 'mua sắm',
+    other: 'khác',
+  }[category] ?? category;
 }

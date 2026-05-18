@@ -27,7 +27,7 @@ export default function Register({ onSwitch }) {
     <div className="card w-full max-w-md p-8">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-2">
-          SplitEasy
+          Zyra
         </h1>
         <p className="text-gray-400">Tạo tài khoản mới</p>
       </div>

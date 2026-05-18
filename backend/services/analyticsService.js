@@ -162,9 +162,9 @@ function buildForecast({ monthlyTrend, categoryTrend, roomTrend, currentMonthExp
     debtTrendDirection: debtHealth.direction,
     confidence: Number(confidence.toFixed(2)),
     assumptions: [
-      'Dua tren chi tieu tu dau thang den hien tai.',
-      'Doi chieu voi trung binh toi da 3 thang gan nhat.',
-      'Du bao chi mang tinh chi bao, khong phai cam ket.',
+      'Dựa trên chi tiêu từ đầu tháng đến hiện tại.',
+      'Đối chiếu với trung bình tối đa 3 tháng gần nhất.',
+      'Dự báo chỉ mang tính tham khảo, không phải cam kết.',
     ],
   };
 }
@@ -208,8 +208,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
   if (priorAverage > 0 && currentMonth > priorAverage * 1.5) {
     anomalies.push({
       type: 'large_expense',
-      title: 'Chi tieu thang nay tang manh',
-      message: `Tong chi thang nay cao hon trung binh gan day ${Math.round(((currentMonth - priorAverage) / priorAverage) * 100)}%.`,
+      title: 'Chi tiêu tháng này tăng mạnh',
+      message: `Tổng chi tháng này cao hơn trung bình gần đây ${Math.round(((currentMonth - priorAverage) / priorAverage) * 100)}%.`,
       severity: 'warning',
       confidence: 0.82,
     });
@@ -221,8 +221,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
     if (previous > 0 && current > previous * 1.6) {
       anomalies.push({
         type: 'category_spike',
-        title: `Danh muc ${series.category} tang dot bien`,
-        message: `Chi tieu ${series.category} cao hon trung binh gan day ${Math.round(((current - previous) / previous) * 100)}%.`,
+        title: `Danh mục ${formatCategoryLabel(series.category)} tăng đột biến`,
+        message: `Chi tiêu ${formatCategoryLabel(series.category)} cao hơn trung bình gần đây ${Math.round(((current - previous) / previous) * 100)}%.`,
         severity: 'warning',
         confidence: 0.84,
       });
@@ -235,8 +235,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
     if (previous > 0 && current > previous * 1.6) {
       anomalies.push({
         type: 'room_spike',
-        title: `Phong ${series.roomName} tang chi tieu`,
-        message: `Chi tieu phong nay cao hon trung binh gan day ${Math.round(((current - previous) / previous) * 100)}%.`,
+        title: `Phòng ${series.roomName} tăng chi tiêu`,
+        message: `Chi tiêu phòng này cao hơn trung bình gần đây ${Math.round(((current - previous) / previous) * 100)}%.`,
         severity: 'warning',
         confidence: 0.82,
       });
@@ -250,7 +250,7 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
       anomalies.push({
         type: 'large_expense',
         title: entry.expense.title,
-        message: 'Khoan chi nay lon hon dang ke so voi muc chi thong thuong gan day.',
+        message: 'Khoản chi này lớn hơn đáng kể so với mức chi thường thấy gần đây.',
         severity: 'info',
         confidence: 0.76,
       });
@@ -260,8 +260,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
   if (debtHealth.direction === 'worsening') {
     anomalies.push({
       type: 'debt_spike',
-      title: 'No dang tang',
-      message: 'Dong tien thanh toan gan day cho thay so no dang xau di.',
+      title: 'Công nợ đang tăng',
+      message: 'Dòng tiền thanh toán gần đây cho thấy số nợ đang xấu đi.',
       severity: 'warning',
       confidence: 0.72,
     });
@@ -365,6 +365,19 @@ function dayDiff(a, b) {
 
 function normalizeTitle(title) {
   return title.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function formatCategoryLabel(category) {
+  return {
+    food: 'ăn uống',
+    drinks: 'đồ uống',
+    transport: 'di chuyển',
+    housing: 'lưu trú',
+    accommodation: 'lưu trú',
+    entertainment: 'giải trí',
+    shopping: 'mua sắm',
+    other: 'khác',
+  }[category] ?? category;
 }
 
 function emptyAnalytics() {

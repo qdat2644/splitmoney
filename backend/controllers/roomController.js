@@ -33,7 +33,7 @@ export const createRoom = async (req, res) => {
     }
 
     if (!room) {
-      return res.status(500).json({ error: 'Failed to generate a unique room code. Please try again.' });
+      return res.status(500).json({ error: 'Không thể tạo mã phòng mới. Vui lòng thử lại.' });
     }
 
     res.status(201).json({ room });
@@ -62,7 +62,7 @@ export const getRoom = async (req, res) => {
       where: { id: roomId },
       include: { members: { include: { user: { select: { id: true, name: true } } } } }
     });
-    if (!room) return res.status(404).json({ error: 'Room not found' });
+    if (!room) return res.status(404).json({ error: 'Không tìm thấy phòng.' });
     res.json({ room });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -73,7 +73,7 @@ export const getRoomGuestsByCode = async (req, res) => {
   try {
     const { code } = req.params;
     const room = await prisma.room.findUnique({ where: { code } });
-    if (!room) return res.status(404).json({ error: 'Room not found' });
+    if (!room) return res.status(404).json({ error: 'Không tìm thấy phòng.' });
     
     // Only return unclaimed active guests
     const guests = await prisma.guestMember.findMany({
@@ -93,13 +93,13 @@ export const joinRoom = async (req, res) => {
     const userId = req.user.userId;
 
     const room = await prisma.room.findUnique({ where: { code } });
-    if (!room) return res.status(404).json({ error: 'Invalid room code' });
+    if (!room) return res.status(404).json({ error: 'Mã phòng không hợp lệ.' });
 
     const existing = await prisma.roomMember.findUnique({
       where: { roomId_userId: { roomId: room.id, userId } }
     });
 
-    if (existing) return res.status(400).json({ error: 'Already requested or joined' });
+    if (existing) return res.status(400).json({ error: 'Bạn đã gửi yêu cầu hoặc đã tham gia phòng này.' });
 
     // Validate guest if provided
     if (claimGuestMemberId) {
@@ -146,7 +146,7 @@ export const approveMember = async (req, res) => {
     if (member.claimGuestMemberId) {
       const guest = await prisma.guestMember.findUnique({ where: { id: member.claimGuestMemberId } });
       if (!guest || guest.roomId !== roomId || guest.status !== 'active' || guest.claimedByUserId) {
-        return res.status(409).json({ error: 'Guest claim is no longer available.' });
+        return res.status(409).json({ error: 'Yêu cầu nhận diện thành viên ảo không còn khả dụng.' });
       }
       await prisma.guestMember.update({
         where: { id: member.claimGuestMemberId },
@@ -185,7 +185,7 @@ export const removeMember = async (req, res) => {
 
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (room.ownerId === userId) {
-      return res.status(400).json({ error: 'Cannot remove the room owner. Transfer ownership first.' });
+      return res.status(400).json({ error: 'Không thể xoá chủ phòng. Hãy chuyển quyền sở hữu trước.' });
     }
 
     // Release any claimed guest member back to active

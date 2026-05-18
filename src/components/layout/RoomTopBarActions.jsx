@@ -15,36 +15,43 @@ export default function RoomTopBarActions({ onAddExpense }) {
   };
 
   return (
-    <>
-      <button onClick={() => navigate('/rooms')} className="flex btn-icon mr-2 text-gray-400 hover:text-white" title="Quay lại danh sách phòng">
-        <ArrowLeft className="w-4 h-4" />
+    <div className="flex items-center gap-2">
+      <button 
+        onClick={() => navigate('/rooms')} 
+        className="btn-icon h-8 w-8 text-gray-400 border border-transparent" 
+        title="Quay lại danh sách phòng"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
       </button>
 
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
+        initial={{ opacity: 0, y: -4 }}
         animate={{ opacity: 1, y: 0 }}
-        className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass-card border border-white/8"
+        className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-dark-900 border border-white/5 text-xs shadow-sm"
       >
-        <span className="text-[10px] text-gray-500 uppercase tracking-wide">Tổng</span>
-        <span className="text-sm font-bold gradient-text">
+        <span className="text-[11px] font-medium text-gray-500">Tổng chi</span>
+        <span className="font-semibold text-gray-200">
           {formatCurrency(stats.totalExpenses, true)}
         </span>
       </motion.div>
 
-      <button onClick={handleExport} className="btn-icon" title="Xuất CSV">
-        <Download className="w-4 h-4" />
+      <button 
+        onClick={handleExport} 
+        className="btn-secondary h-8 px-2.5 text-xs font-medium flex items-center gap-1 border border-white/5 bg-white/[0.01]" 
+        title="Xuất CSV"
+      >
+        <Download className="w-3.5 h-3.5" />
+        <span className="hidden md:inline">Xuất CSV</span>
       </button>
 
       <motion.button
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
+        whileTap={{ scale: 0.98 }}
         onClick={onAddExpense}
-        className="btn-primary flex items-center gap-1.5 text-xs ml-1"
+        className="btn-primary h-8 px-3 text-xs flex items-center gap-1.5 font-medium"
       >
         <Plus className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Thêm chi phí</span>
-        <span className="sm:hidden">Thêm</span>
+        <span>Thêm chi phí</span>
       </motion.button>
-    </>
+    </div>
   );
 }

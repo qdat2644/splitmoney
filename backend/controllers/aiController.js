@@ -7,7 +7,7 @@ export const parseExpense = async (req, res, next) => {
     const { roomId } = req.params;
     
     if (!text) {
-      return res.status(400).json({ error: 'Invalid request data. text is required.' });
+      return res.status(400).json({ error: 'Vui lòng nhập nội dung cần phân tích.' });
     }
 
     const currentUser = req.user;
@@ -50,6 +50,6 @@ export const parseExpense = async (req, res, next) => {
     });
   } catch (error) {
     console.error('AI Controller Error:', error);
-    res.status(500).json({ error: error.message || 'Failed to process AI request.', details: error.toString() });
+    res.status(500).json({ error: 'Không thể xử lý yêu cầu AI lúc này.' });
   }
 };

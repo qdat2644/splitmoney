@@ -33,7 +33,7 @@ export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
   }
 
   if (!response.ok) {
-    throw new Error(data?.error || data?.message || 'API Request Failed');
+    throw new Error(data?.error || data?.message || 'Yêu cầu không thành công.');
   }
 
   return data;
@@ -83,6 +83,7 @@ export const userApi = {
   getPersonalSummary: () => apiClient('/users/me/summary'),
   getInsights: () => apiClient('/users/me/insights'),
   getAnalytics: () => apiClient('/users/me/analytics'),
+  getCopilot: () => apiClient('/users/me/copilot'),
 };
 
 export const paymentApi = {

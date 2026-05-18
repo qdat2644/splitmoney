@@ -10,7 +10,7 @@ export default function UserSelection() {
       <div className="card w-full max-w-md p-8 text-center space-y-8 animate-in fade-in zoom-in duration-300">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-2">
-            SplitEasy
+            Zyra
           </h1>
           <p className="text-gray-400">Bạn là ai trong nhóm?</p>
         </div>

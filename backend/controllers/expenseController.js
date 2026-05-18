@@ -25,8 +25,8 @@ async function getRoomIdentities(roomId) {
 function buildParticipantRows(participants, amount, splitType, validUserIds, validGuestIds) {
   // Validate identities
   for (const p of participants) {
-    if (p.userId      && !validUserIds.has(p.userId))      throw Object.assign(new Error('Participant user not in room'), { status: 400 });
-    if (p.guestMemberId && !validGuestIds.has(p.guestMemberId)) throw Object.assign(new Error('Participant guest not in room'), { status: 400 });
+    if (p.userId      && !validUserIds.has(p.userId))      throw Object.assign(new Error('Người tham gia không thuộc phòng này.'), { status: 400 });
+    if (p.guestMemberId && !validGuestIds.has(p.guestMemberId)) throw Object.assign(new Error('Khách tham gia không thuộc phòng này.'), { status: 400 });
   }
 
   // Resolve shares using canonical engine
@@ -74,16 +74,16 @@ export const addExpense = async (req, res) => {
 
     // Basic validation
     if (!paidByUserId && !paidByGuestMemberId)
-      return res.status(400).json({ error: 'Must specify a payer' });
+      return res.status(400).json({ error: 'Vui lòng chọn người trả.' });
     if (typeof amount !== 'number' || isNaN(amount) || amount <= 0)
-      return res.status(400).json({ error: 'Invalid amount' });
+      return res.status(400).json({ error: 'Số tiền không hợp lệ.' });
     if (!participants || participants.length === 0)
-      return res.status(400).json({ error: 'Must have at least one participant' });
+      return res.status(400).json({ error: 'Cần có ít nhất một người tham gia.' });
 
     const { validUserIds, validGuestIds } = await getRoomIdentities(roomId);
 
-    if (paidByUserId        && !validUserIds.has(paidByUserId))        return res.status(400).json({ error: 'Invalid payer (not in room)' });
-    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) return res.status(400).json({ error: 'Invalid guest payer' });
+    if (paidByUserId        && !validUserIds.has(paidByUserId))        return res.status(400).json({ error: 'Người trả không thuộc phòng này.' });
+    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) return res.status(400).json({ error: 'Khách trả tiền không hợp lệ.' });
 
     let participantRows;
     try {
@@ -116,7 +116,7 @@ export const addExpense = async (req, res) => {
 
     res.status(201).json({ expense });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể tạo khoản chi lúc này.' });
   }
 };
 
@@ -134,18 +134,18 @@ export const updateExpense = async (req, res) => {
 
     const existingExpense = await prisma.expense.findUnique({ where: { id: expenseId } });
     if (!existingExpense || existingExpense.roomId !== roomId)
-      return res.status(404).json({ error: 'Expense not found' });
+      return res.status(404).json({ error: 'Không tìm thấy khoản chi.' });
     if (!paidByUserId && !paidByGuestMemberId)
-      return res.status(400).json({ error: 'Must specify a payer' });
+      return res.status(400).json({ error: 'Vui lòng chọn người trả.' });
     if (typeof amount !== 'number' || isNaN(amount) || amount <= 0)
-      return res.status(400).json({ error: 'Invalid amount' });
+      return res.status(400).json({ error: 'Số tiền không hợp lệ.' });
     if (!participants || participants.length === 0)
-      return res.status(400).json({ error: 'Must have at least one participant' });
+      return res.status(400).json({ error: 'Cần có ít nhất một người tham gia.' });
 
     const { validUserIds, validGuestIds } = await getRoomIdentities(roomId);
 
-    if (paidByUserId        && !validUserIds.has(paidByUserId))        return res.status(400).json({ error: 'Invalid payer' });
-    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) return res.status(400).json({ error: 'Invalid guest payer' });
+    if (paidByUserId        && !validUserIds.has(paidByUserId))        return res.status(400).json({ error: 'Người trả không hợp lệ.' });
+    if (paidByGuestMemberId && !validGuestIds.has(paidByGuestMemberId)) return res.status(400).json({ error: 'Khách trả tiền không hợp lệ.' });
 
     let participantRows;
     try {
@@ -179,7 +179,7 @@ export const updateExpense = async (req, res) => {
 
     res.json({ expense });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể cập nhật khoản chi lúc này.' });
   }
 };
 
@@ -193,7 +193,7 @@ export const deleteExpense = async (req, res) => {
       include: { participants: true }
     });
     if (!expense || expense.roomId !== roomId)
-      return res.status(404).json({ error: 'Expense not found' });
+      return res.status(404).json({ error: 'Không tìm thấy khoản chi.' });
 
     await prisma.expense.delete({ where: { id: expenseId } });
 
@@ -206,6 +206,6 @@ export const deleteExpense = async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Không thể xoá khoản chi lúc này.' });
   }
 };

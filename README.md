@@ -1,4 +1,4 @@
-# SplitEasy — Ứng dụng chia tiền nhóm 💸
+# Zyra — Không gian tài chính thông minh
 
 Ứng dụng web hiện đại để quản lý chi tiêu nhóm, tự động tính toán công nợ tối ưu.
 

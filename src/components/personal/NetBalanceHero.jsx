@@ -1,4 +1,5 @@
 // NetBalanceHero.jsx — Big hero card showing net financial position
+// Rebuilt to follow modern calm, minimal, SaaS workspace standards.
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
@@ -8,45 +9,42 @@ export default function NetBalanceHero({ netBalance, totalIOwe, totalOwedToMe })
   const isNegative = netBalance < -500;
 
   const config = isPositive
-    ? { icon: TrendingUp,   label: 'Người khác đang nợ bạn', grad: 'from-emerald-500/20 to-teal-500/10',    border: 'border-emerald-500/30', text: 'text-emerald-400', iconBg: 'bg-emerald-500/20' }
+    ? { icon: TrendingUp,   label: 'Bạn đang có dư nợ ròng', border: 'border-emerald-500/10', bg: 'bg-emerald-950/10', text: 'text-emerald-400', iconBg: 'bg-emerald-500/10' }
     : isNegative
-    ? { icon: TrendingDown, label: 'Bạn đang nợ người khác',  grad: 'from-red-500/20 to-rose-500/10',        border: 'border-red-500/30',     text: 'text-red-400',     iconBg: 'bg-red-500/20' }
-    : { icon: Minus,        label: 'Số dư cân bằng',          grad: 'from-white/5 to-white/3',               border: 'border-white/10',       text: 'text-gray-300',    iconBg: 'bg-white/10' };
+    ? { icon: TrendingDown, label: 'Bạn đang có nợ ròng',    border: 'border-red-500/10',     bg: 'bg-red-950/10',     text: 'text-red-400',     iconBg: 'bg-red-500/10' }
+    : { icon: Minus,        label: 'Số dư cân bằng',          border: 'border-white/5',        bg: 'bg-dark-800',       text: 'text-gray-300',    iconBg: 'bg-white/5' };
 
   const { icon: Icon } = config;
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
+      initial={{ opacity: 0, scale: 0.99 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-      className={`relative overflow-hidden rounded-2xl border ${config.border} bg-gradient-to-br ${config.grad} p-6`}
+      className={`relative overflow-hidden rounded-xl border ${config.border} ${config.bg} p-5`}
     >
-      {/* Decorative glow */}
-      <div className={`absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20 blur-3xl ${isPositive ? 'bg-emerald-500' : isNegative ? 'bg-red-500' : 'bg-white'}`} />
-
       <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Số dư tổng</p>
-          <p className={`text-4xl font-extrabold tracking-tight ${config.text}`}>
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Số dư tổng quan</p>
+          <p className={`text-2xl font-bold tracking-tight ${config.text}`}>
             {isPositive ? '+' : ''}{formatCurrency(netBalance, true)}
           </p>
-          <p className="text-sm text-gray-400 mt-2">{config.label}</p>
+          <p className="text-xs text-gray-400 font-medium">{config.label}</p>
         </div>
-        <div className={`w-12 h-12 rounded-2xl ${config.iconBg} flex items-center justify-center shrink-0`}>
-          <Icon className={`w-6 h-6 ${config.text}`} />
+        <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 border ${config.border} ${config.iconBg}`}>
+          <Icon className={`w-4 h-4 ${config.text}`} />
         </div>
       </div>
 
       {/* Sub breakdown */}
-      <div className="mt-5 pt-4 border-t border-white/5 grid grid-cols-2 gap-4">
+      <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-4">
         <div>
-          <p className="text-[10px] text-gray-600 uppercase tracking-wider">Tôi đang nợ</p>
-          <p className="text-base font-bold text-red-400 mt-0.5">{formatCurrency(totalIOwe, true)}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Bạn nợ người khác</p>
+          <p className="text-sm font-bold text-red-400 mt-0.5">{formatCurrency(totalIOwe, true)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-gray-600 uppercase tracking-wider">Đang được nợ</p>
-          <p className="text-base font-bold text-emerald-400 mt-0.5">{formatCurrency(totalOwedToMe, true)}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Người khác nợ bạn</p>
+          <p className="text-sm font-bold text-emerald-400 mt-0.5">{formatCurrency(totalOwedToMe, true)}</p>
         </div>
       </div>
     </motion.div>

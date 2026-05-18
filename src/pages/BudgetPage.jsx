@@ -13,6 +13,7 @@ import PageHeader from '../components/ui/PageHeader';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
 import { SkeletonPage } from '../components/ui/Skeleton';
+import ContextualCopilotPanel from '../components/copilot/ContextualCopilotPanel';
 
 export default function BudgetPage() {
   const { logout } = useAuth();
@@ -90,6 +91,11 @@ export default function BudgetPage() {
             </AppCard>
           </motion.div>
         )}
+
+        <ContextualCopilotPanel
+          title="Theo dõi ngân sách"
+          types={['budget_risk', 'budget_suggestion', 'recurring_expense']}
+        />
 
         {/* Loading */}
         {loading && (

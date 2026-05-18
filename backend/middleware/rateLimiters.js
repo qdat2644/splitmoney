@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 const common = {
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: true, message: 'Too many requests', code: 'RATE_LIMITED' },
+  message: { error: true, message: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.', code: 'RATE_LIMITED' },
 };
 
 export const generalLimiter = rateLimit({

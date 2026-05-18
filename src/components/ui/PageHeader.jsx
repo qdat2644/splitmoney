@@ -8,17 +8,25 @@ export default function PageHeader({
 }) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: -10 }} 
+      initial={{ opacity: 0, y: -4 }} 
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-white/5"
     >
-      <div>
-        {eyebrow && <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">{eyebrow}</p>}
-        <h1 className="text-2xl font-bold text-white">{title}</h1>
-        {subtitle && <p className="text-gray-400 mt-1">{subtitle}</p>}
+      <div className="space-y-0.5">
+        {eyebrow && (
+          <p className="text-[11px] font-medium text-gray-500/85">
+            {eyebrow}
+          </p>
+        )}
+        <h1 className="text-lg font-semibold tracking-tight text-white">{title}</h1>
+        {subtitle && (
+          <p className="text-xs text-gray-400 font-normal leading-relaxed">
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 sm:pt-1">
           {actions}
         </div>
       )}

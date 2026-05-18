@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'spliteasy-backend',
+    name: 'zyra-backend',
     cwd: './backend',
     script: 'server.js',
     instances: 1,

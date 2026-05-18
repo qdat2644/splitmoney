@@ -15,8 +15,8 @@ sudo npm install -g pm2
 ## 2. App setup
 
 ```bash
-git clone <repo-url> spliteasy
-cd spliteasy
+git clone <repo-url> zyra
+cd zyra
 npm ci
 cd backend
 npm ci
@@ -64,8 +64,8 @@ Useful commands:
 
 ```bash
 pm2 status
-pm2 logs spliteasy-backend
-pm2 restart spliteasy-backend
+pm2 logs zyra-backend
+pm2 restart zyra-backend
 ```
 
 ## 6. Nginx reverse proxy
@@ -94,7 +94,7 @@ Enable HTTPS with Certbot before exposing production traffic.
 
 ```bash
 curl http://127.0.0.1:5000/health
-pm2 logs spliteasy-backend
+pm2 logs zyra-backend
 ```
 
 Expected health body:
