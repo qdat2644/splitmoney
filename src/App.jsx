@@ -21,7 +21,7 @@ const BudgetPage = lazy(() => import('./pages/BudgetPage'));
 const AICopilotPage = lazy(() => import('./pages/AICopilotPage'));
 const ForecastsPage = lazy(() => import('./pages/ForecastsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminWorkspace = lazy(() => import('./pages/admin/AdminWorkspace'));
 
 function PageFallback() {
   return (
@@ -141,7 +141,7 @@ function AppContent() {
       <Route path="/copilot" element={<AppShell mode="global" topBarTitle="Trợ lý AI"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
       <Route path="/forecasts" element={<AppShell mode="global" topBarTitle="Dự báo"><Suspense fallback={<PageFallback />}><ForecastsPage /></Suspense></AppShell>} />
       <Route path="/settings" element={<AppShell mode="global" topBarTitle="Cài đặt"><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AppShell>} />
-      <Route path="/admin" element={<AdminGuard><AppShell mode="global" topBarTitle="Quản trị"><Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense></AppShell></AdminGuard>} />
+      <Route path="/admin/*" element={<AdminGuard><AppShell mode="global" topBarTitle="Quản trị"><Suspense fallback={<PageFallback />}><AdminWorkspace /></Suspense></AppShell></AdminGuard>} />
       <Route path="/rooms/:roomId/*" element={<RoomGuard><RoomRoutes /></RoomGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

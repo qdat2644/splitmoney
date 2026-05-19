@@ -124,10 +124,36 @@ export const importApi = {
 };
 
 export const adminApi = {
+  // Read-only observability
   getOverview: () => apiClient('/admin/overview'),
   getImports: () => apiClient('/admin/imports'),
   getAi: () => apiClient('/admin/ai'),
   getSecurity: () => apiClient('/admin/security'),
+  getTrends: () => apiClient('/admin/trends'),
+  getAuditLog: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return apiClient(`/admin/audit${q ? `?${q}` : ''}`);
+  },
+
+  // Listings with search/filter
+  getUsers: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return apiClient(`/admin/users${q ? `?${q}` : ''}`);
+  },
+  getRooms: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return apiClient(`/admin/rooms${q ? `?${q}` : ''}`);
+  },
+
+  // Inspectors
   getRoom: (roomId) => apiClient(`/admin/rooms/${encodeURIComponent(roomId)}`),
   getUser: (userId) => apiClient(`/admin/users/${encodeURIComponent(userId)}`),
+
+  // Controlled mutations
+  suspendUser: (userId, reason) => apiClient('/admin/users/suspend', { body: { userId, reason } }),
+  reactivateUser: (userId) => apiClient('/admin/users/reactivate', { body: { userId } }),
+  assignRole: (userId, role) => apiClient('/admin/users/assign-role', { body: { userId, role } }),
+  archiveRoom: (roomId) => apiClient('/admin/rooms/archive', { body: { roomId } }),
+  reopenRoom: (roomId) => apiClient('/admin/rooms/reopen', { body: { roomId } }),
+  recomputeAiProfile: (userId) => apiClient('/admin/ai/recompute-profile', { body: { userId } }),
 };

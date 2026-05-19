@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, ArrowLeftRight, BarChart3, Bot, DoorOpen, House,
   LayoutDashboard, Map, PiggyBank, Receipt, Settings, Sparkles,
-  TrendingUp, Users, Wallet, X, Shield,
+  TrendingUp, UploadCloud, Users, Wallet, X, Shield,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -92,9 +92,20 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
       title: 'Hệ thống',
       items: [
         { to: '/settings', icon: Settings, label: 'Cài đặt' },
-        ...(currentUser?.role === 'admin' ? [{ to: '/admin', icon: Shield, label: 'Quản trị' }] : []),
       ],
     },
+    ...(currentUser?.role === 'admin' ? [{
+      title: 'Quản trị',
+      items: [
+        { to: '/admin', icon: Shield, label: 'Tổng quan', exact: true },
+        { to: '/admin/ai', icon: Bot, label: 'AI' },
+        { to: '/admin/imports', icon: UploadCloud, label: 'Nhập dữ liệu' },
+        { to: '/admin/rooms', icon: DoorOpen, label: 'Nhóm' },
+        { to: '/admin/users', icon: Users, label: 'Người dùng' },
+        { to: '/admin/security', icon: Shield, label: 'Bảo mật' },
+        { to: '/admin/audit', icon: Activity, label: 'Nhật ký' },
+      ],
+    }] : []),
   ];
 
   const roomSections = [
