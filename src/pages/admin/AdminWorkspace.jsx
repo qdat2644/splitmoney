@@ -28,7 +28,6 @@ export default function AdminWorkspace() {
   // Derive active tab from URL
   const pathSegment = location.pathname.replace('/admin', '').replace(/^\//, '').split('/')[0] || '';
   const activeTab = tabs.find(t => t.key === pathSegment) ? pathSegment : '';
-  const activeLabel = tabs.find(t => t.key === activeTab)?.label ?? 'Tổng quan';
 
   // Shared data loading
   const [overviewData, setOverviewData] = useState(null);
@@ -62,64 +61,59 @@ export default function AdminWorkspace() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case '':
-        return <AdminOverviewTab data={overviewData} trends={trendData} loading={loading} />;
-      case 'ai':
-        return <AdminAITab data={overviewData?.ai} trends={trendData} loading={loading} />;
-      case 'imports':
-        return <AdminImportsTab data={overviewData?.imports} trends={trendData} loading={loading} />;
-      case 'rooms':
-        return <AdminRoomsTab onRefresh={loadOverview} />;
-      case 'users':
-        return <AdminUsersTab onRefresh={loadOverview} />;
-      case 'security':
-        return <AdminSecurityTab data={overviewData?.security} trends={trendData} loading={loading} />;
-      case 'audit':
-        return <AdminAuditTab />;
-      default:
-        return <AdminOverviewTab data={overviewData} trends={trendData} loading={loading} />;
+      case '':       return <AdminOverviewTab data={overviewData} trends={trendData} loading={loading} />;
+      case 'ai':     return <AdminAITab data={overviewData?.ai} trends={trendData} loading={loading} />;
+      case 'imports':return <AdminImportsTab data={overviewData?.imports} trends={trendData} loading={loading} />;
+      case 'rooms':  return <AdminRoomsTab onRefresh={loadOverview} />;
+      case 'users':  return <AdminUsersTab onRefresh={loadOverview} />;
+      case 'security':return <AdminSecurityTab data={overviewData?.security} trends={trendData} loading={loading} />;
+      case 'audit':  return <AdminAuditTab />;
+      default:       return <AdminOverviewTab data={overviewData} trends={trendData} loading={loading} />;
     }
   };
 
   return (
     <main className="mx-auto max-w-6xl space-y-5">
+      {/* Title row */}
       <PageHeader
         eyebrow="Zyra / Admin operations"
         title="Bảng điều hành vận hành"
         subtitle="Theo dõi hệ thống, AI, nhập dữ liệu, nhóm và tín hiệu bảo mật ở mức tổng hợp."
         actions={(
-          <>
-            {/* Compact section switcher */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
-              <span className="text-[11px] text-zinc-500 shrink-0">Phân hệ:</span>
-              <select
-                value={activeTab}
-                onChange={(e) => {
-                  const tab = tabs.find(t => t.key === e.target.value);
-                  if (tab) navigate(tab.path);
-                }}
-                className="bg-transparent text-xs font-medium text-zinc-200 outline-none cursor-pointer"
-              >
-                {tabs.map(t => (
-                  <option key={t.key} value={t.key} className="bg-zinc-900 text-zinc-200">
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Refresh */}
-            <button
-              type="button"
-              onClick={loadOverview}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-white/[0.07] transition-colors"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Làm mới
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={loadOverview}
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-colors"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Làm mới
+          </button>
         )}
       />
+
+      {/* Compact segmented section nav */}
+      <div className="overflow-x-auto">
+        <nav className="inline-flex h-8 items-center gap-px rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => navigate(tab.path)}
+                className={`
+                  h-full whitespace-nowrap rounded-md px-3 text-xs font-medium transition-colors
+                  ${isActive
+                    ? 'bg-white/[0.07] text-zinc-100 border border-white/[0.08] shadow-none'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]'
+                  }
+                `}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
       {error && (
         <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-100">
