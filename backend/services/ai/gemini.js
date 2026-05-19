@@ -21,7 +21,7 @@ export const parseWithGemini = async (text, memberNames, currentUser) => {
 Bạn là trợ lý ảo phân tích chi tiêu. Hãy trích xuất thông tin từ câu: "${text}"
 
 Danh sách thành viên: [${memberNames.join(', ')}].
-Người đang nhập liệu ("tôi", "mình", "tao"): ${currentUser.name}.
+Người đang nhập liệu ("tôi", "mình", "tao", "tui", "t"): ${currentUser.name}.
 
 Quy tắc:
 1. Trả về JSON hợp lệ theo schema.
@@ -29,7 +29,7 @@ Quy tắc:
 3. Nếu chứa "cả nhóm/team", thêm toàn bộ thành viên vào participants.
 4. amount là số nguyên (ví dụ: "350k" -> 350000).
 5. date so với ngày hiện tại (${new Date().toISOString().split('T')[0]}). Mặc định là hôm nay.
-6. Khi câu nói chứa "tôi", "mình", "tao", hãy sử dụng tên "${currentUser.name}".
+6. Khi câu nói chứa "tôi", "mình", "tao", "tui", "t", hãy sử dụng tên "${currentUser.name}".
 `;
 
   try {
