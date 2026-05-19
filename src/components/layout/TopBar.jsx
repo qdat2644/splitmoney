@@ -52,15 +52,17 @@ export default function TopBar({ onMenuClick, title, children }) {
         {/* Contextual actions passed as children */}
         {children}
 
-        {/* Copilot button */}
-        <button 
-          onClick={() => navigate('/copilot')} 
-          className="btn-secondary h-8 px-2.5 text-xs flex items-center gap-1.5 font-medium border border-white/5 bg-white/[0.01]" 
-          title="Trợ lý AI"
-        >
-          <Bot className="h-3.5 w-3.5 text-purple-400" />
-          <span>Trợ lý AI</span>
-        </button>
+        {/* Copilot shortcut — hidden when already on /copilot or inside /admin */}
+        {!location.pathname.startsWith('/copilot') && !location.pathname.startsWith('/admin') && (
+          <button
+            onClick={() => navigate('/copilot')}
+            className="btn-secondary h-8 px-2.5 text-xs flex items-center gap-1.5 font-medium border border-white/5 bg-white/[0.01]"
+            title="Trợ lý AI"
+          >
+            <Bot className="h-3.5 w-3.5 text-purple-400" />
+            <span>Trợ lý AI</span>
+          </button>
+        )}
 
         {/* Theme Toggle */}
         <button 

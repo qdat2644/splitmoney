@@ -84,7 +84,6 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
       title: 'AI',
       items: [
         { to: '/copilot', icon: Bot, label: 'Trợ lý AI' },
-        { to: '/plans', icon: Map, label: 'Lập kế hoạch' },
         { to: '/forecasts', icon: TrendingUp, label: 'Dự báo' },
       ],
     },
