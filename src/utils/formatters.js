@@ -4,18 +4,39 @@
  * Format number as Vietnamese currency (VND)
  */
 export function formatCurrency(amount, compact = false) {
-  if (compact && Math.abs(amount) >= 1_000_000) {
-    return (amount / 1_000_000).toFixed(1).replace('.0', '') + 'M';
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric)) return '0đ';
+
+  const sign = numeric < 0 ? '-' : '';
+  const absolute = Math.abs(Math.round(numeric));
+
+  if (compact && absolute >= 1_000_000) {
+    const value = absolute / 1_000_000;
+    return `${sign}${value.toLocaleString('vi-VN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: value >= 10 ? 0 : 1,
+    })}trđ`;
   }
-  if (compact && Math.abs(amount) >= 1_000) {
-    return (amount / 1_000).toFixed(0) + 'k';
+
+  if (compact && absolute >= 1_000) {
+    return `${sign}${Math.round(absolute / 1_000).toLocaleString('vi-VN')}kđ`;
   }
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
+
+  return `${sign}${absolute.toLocaleString('vi-VN', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  })}đ`;
+}
+
+/**
+ * Format large raw integer amounts inside generated finance copy.
+ * Leaves short counts and percentages alone.
+ */
+export function formatCurrencyText(text, compact = false) {
+  if (text == null) return '';
+  return String(text).replace(/(^|[^\d.,])(-?\d{4,})(?![\d.,%])/g, (match, prefix, value) => {
+    return `${prefix}${formatCurrency(Number(value), compact)}`;
+  });
 }
 
 /**

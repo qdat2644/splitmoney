@@ -16,6 +16,7 @@ import planRoutes from './routes/planRoutes.js';
 import exportRoutes from './routes/exportRoutes.js';
 import importRoutes from './routes/importRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import { env } from './config/env.js';
 import { corsOptions } from './config/cors.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -58,6 +59,7 @@ export function createApp() {
   app.use('/api/budgets', budgetRoutes);
   app.use('/api/plans', planRoutes);
   app.use('/api/export', exportRoutes);
+  app.use('/api/admin', adminRoutes);
   app.use('/api', notFoundHandler);
 
   app.use(express.static(distPath));

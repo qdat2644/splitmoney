@@ -3,6 +3,7 @@ import { Lightbulb, TrendingUp, AlertCircle } from 'lucide-react';
 import { generateInsights } from '../../services/ai/insightService';
 import { useApp } from '../../context/AppContext';
 import { motion } from 'framer-motion';
+import { formatCurrencyText } from '../../utils/formatters';
 
 export default function InsightsWidget() {
   const { expenses, members, currentUser } = useApp();
@@ -33,7 +34,7 @@ export default function InsightsWidget() {
             ) : (
               <TrendingUp className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
             )}
-            <p className="text-xs text-gray-300 leading-relaxed">{insight}</p>
+            <p className="text-xs text-gray-300 leading-relaxed">{formatCurrencyText(insight)}</p>
           </motion.div>
         ))}
       </div>

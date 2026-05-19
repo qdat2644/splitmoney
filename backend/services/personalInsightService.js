@@ -57,7 +57,7 @@ export async function buildPersonalInsights(userId) {
 
   // ── Step 3: Deterministic fallback ───────────────────────────────────────
   if (!insights) {
-    insights = generateRuleBasedInsights(summary, analytics);
+    insights = generateRuleBasedInsights(summary, analytics, rawProfile?.temporalMemory);
     console.log(`[PersonalInsights] Rules generated ${insights.length} insights for user ${userId}`);
   }
 

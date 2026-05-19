@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import { formatCurrencyText } from '../../utils/currencyFormatter.js';
 import { logger } from '../../utils/logger.js';
 dotenv.config();
 
@@ -11,7 +12,20 @@ try {
 }
 
 const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const VALID_TYPES = new Set(['spending', 'debt', 'trend', 'suggestion', 'positive', 'warning']);
+const VALID_TYPES = new Set([
+  'spending',
+  'debt',
+  'trend',
+  'suggestion',
+  'positive',
+  'warning',
+  'improvement',
+  'worsening',
+  'recurring_rhythm',
+  'stabilization',
+  'anomaly_shift',
+  'habit_reinforcement',
+]);
 const VALID_SEVERITIES = new Set(['info', 'positive', 'warning']);
 const insightSchema = {
   type: Type.OBJECT,
@@ -107,10 +121,14 @@ ${anomalyLines || '  - Khong co'}
 ${profileContext ? profileContext + '\n' : ''}
 Yeu cau
 - Toi da 5 nhan xet, moi nhan xet duoi 40 tu.
+- Giong van: binh tinh, tu nhien, ho tro, khong gay hoang mang.
+- Viet nhu tro ly tai chinh ca nhan, khong viet nhu dashboard BI hay canh bao he thong.
+- Tranh cac tu "phat hien", "dot bien", "canh bao", "bat thuong" neu khong that su can.
+- Neu nhac tien, dinh dang theo Tieng Viet va them "đ" (vi du 8.468.334đ), khong de so nguyen tho.
 - Khong dua loi khuyen dau tu, phap ly, y te.
 - Khong suy doan ngoai du lieu tong hop o tren.
 - Khong liet ke thong tin dinh danh hay du lieu nhay cam.
-- type thuoc: spending, debt, trend, suggestion, positive, warning.
+- type thuoc: spending, debt, trend, suggestion, positive, warning, improvement, worsening, recurring_rhythm, stabilization, anomaly_shift, habit_reinforcement.
 - severity thuoc: info, positive, warning.
 - confidence bat buoc tu 0 den 1.
 - Ngon ngu: Tieng Viet.
@@ -146,8 +164,8 @@ function validateAndFilter(items) {
     )
     .map((item) => ({
       type: item.type,
-      title: item.title.trim().slice(0, 80),
-      message: item.message.trim().slice(0, 300),
+      title: formatCurrencyText(item.title.trim()).slice(0, 80),
+      message: formatCurrencyText(item.message.trim()).slice(0, 300),
       severity: item.severity,
       confidence: item.confidence,
     }))

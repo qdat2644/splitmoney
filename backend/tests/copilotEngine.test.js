@@ -85,8 +85,58 @@ describe('copilot recommendation engine', () => {
     const recurring = buildRecommendations(makeContext()).find((item) => item.type === 'recurring_expense');
     expect(recurring.evidence).toEqual(expect.arrayContaining([
       'Ít nhất 3 khoản chi tương đồng',
-      'Chu kỳ hàng tháng',
+      'Chu kỳ mỗi tháng',
     ]));
     expect(recurring.action.type).toBe('create_recurring_budget');
+  });
+
+  it('suppresses semantically similar recommendations by category and action', () => {
+    const lowPriority = serializeRecommendation({
+      id: 'budget-suggestion:food',
+      type: 'budget_suggestion',
+      category: 'food',
+      title: 'Danh mục “Ăn uống” đang chi tiêu khá cao',
+      description: '',
+      severity: 'info',
+      confidence: 0.7,
+      action: { type: 'create_budget', to: '/budget' },
+      createdAt,
+    });
+    const highPriority = serializeRecommendation({
+      id: 'budget-risk:food',
+      type: 'budget_risk',
+      category: 'food',
+      title: 'Danh mục “Ăn uống” có thể vượt hạn mức',
+      description: '',
+      severity: 'warning',
+      confidence: 0.8,
+      action: { type: 'open_budget', to: '/budget' },
+      createdAt,
+    });
+
+    expect(dedupeRecommendations([lowPriority, highPriority])).toEqual([highPriority]);
+  });
+
+  it('turns temporal memory into explainable continuity recommendations', () => {
+    const context = makeContext();
+    context.profile = {
+      temporalMemory: {
+        dataQuality: { isSparse: false },
+        improvingAreas: [],
+        recurringPatterns: [],
+        historicalComparisons: {
+          rolling7DayTrend: { direction: 'up', confidence: 0.76 },
+          categoryMomentum: [],
+        },
+      },
+    };
+
+    const temporal = buildRecommendations(context).find((item) => item.type === 'temporal_worsening');
+    expect(temporal).toMatchObject({
+      title: '7 ngày gần đây đang chi nhanh hơn',
+      personality: 'gentle_warning',
+      priorityBoost: 0.18,
+    });
+    expect(temporal.evidence).toEqual(expect.arrayContaining(['7 ngày gần đây', 'So với 7 ngày trước']));
   });
 });

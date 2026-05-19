@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Activity } from 'lucide-react';
 import { getSpendingPredictions } from '../../services/ai/predictionService';
 import { useApp } from '../../context/AppContext';
+import { formatCurrency } from '../../utils/formatters';
 
 export default function PredictionWidget() {
   const { expenses } = useApp();
@@ -19,13 +20,13 @@ export default function PredictionWidget() {
         <div>
           <p className="text-xs text-gray-500 mb-1">TB mỗi ngày</p>
           <p className="text-lg font-bold text-gray-200">
-            {prediction.dailyAverage.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}đ
+            {formatCurrency(prediction.dailyAverage)}
           </p>
         </div>
         <div>
           <p className="text-xs text-gray-500 mb-1">Dự kiến cuối tháng</p>
           <p className="text-lg font-bold text-purple-400">
-            {prediction.predictedTotal.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}đ
+            {formatCurrency(prediction.predictedTotal)}
           </p>
         </div>
       </div>
@@ -36,7 +37,7 @@ export default function PredictionWidget() {
           {prediction.predictedCategories.sort((a, b) => b.predictedMonthTotal - a.predictedMonthTotal).slice(0, 3).map(cat => (
             <div key={cat.category} className="flex justify-between text-xs">
               <span className="text-gray-400 capitalize">{cat.category}</span>
-              <span className="text-gray-300 font-medium">{cat.predictedMonthTotal.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}đ</span>
+              <span className="text-gray-300 font-medium">{formatCurrency(cat.predictedMonthTotal)}</span>
             </div>
           ))}
         </div>

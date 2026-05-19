@@ -1,4 +1,6 @@
-export function generateRuleBasedInsights(summary, analytics = null) {
+import { formatCurrency } from './currencyFormatter.js';
+
+export function generateRuleBasedInsights(summary, analytics = null, temporalMemory = null) {
   const insights = [];
   const totalParticipated = summary.categoryBreakdown.reduce((sum, item) => sum + item.amount, 0);
 
@@ -6,10 +8,22 @@ export function generateRuleBasedInsights(summary, analytics = null) {
     return [{
       type: 'suggestion',
       title: 'Bắt đầu theo dõi chi tiêu',
-      message: 'Bạn chưa có khoản chi nào để phân tích tài chính.',
+      message: 'Khi có thêm vài khoản chi, Zyra sẽ nhận ra nhịp chi và gợi ý rõ hơn cho bạn.',
       severity: 'info',
       confidence: 1,
     }];
+  }
+
+  for (const candidate of temporalMemory?.insightCandidates ?? []) {
+    if (candidate.confidence < 0.55) continue;
+    insights.push({
+      type: mapTemporalInsightType(candidate.type),
+      title: candidate.title,
+      message: candidate.message,
+      severity: candidate.type === 'worsening' || candidate.type === 'anomaly_shift' ? 'warning' : candidate.type === 'improvement' || candidate.type === 'stabilization' || candidate.type === 'habit_reinforcement' ? 'positive' : 'info',
+      confidence: candidate.confidence,
+    });
+    if (insights.length >= 2) break;
   }
 
   const foodTotal = summary.categoryBreakdown
@@ -18,8 +32,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (totalParticipated > 0 && foodTotal / totalParticipated > 0.4) {
     insights.push({
       type: 'warning',
-      title: 'Chi tiêu ăn uống cao',
-      message: `Ăn uống chiếm ${Math.round((foodTotal / totalParticipated) * 100)}% tổng chi tiêu của bạn.`,
+      title: 'Ăn uống đang chiếm tỷ trọng lớn',
+      message: `Ăn uống chiếm khoảng ${Math.round((foodTotal / totalParticipated) * 100)}% tổng chi tiêu gần đây. Đặt một hạn mức riêng có thể giúp bạn dễ theo dõi hơn.`,
       severity: 'warning',
       confidence: 0.9,
     });
@@ -28,8 +42,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (summary.totalIOwe > summary.totalOwedToMe * 2 && summary.totalIOwe > 50000) {
     insights.push({
       type: 'debt',
-      title: 'Công nợ đang cao',
-      message: `Bạn đang nợ ${(summary.totalIOwe / 1000).toFixed(0)}k, cao hơn đáng kể so với số tiền được nợ.`,
+      title: 'Công nợ nhóm cần theo dõi thêm',
+      message: `Bạn đang cần thanh toán khoảng ${formatCurrency(summary.totalIOwe)}. Xem lại các khoản đến hạn sẽ giúp dòng tiền rõ ràng hơn.`,
       severity: 'warning',
       confidence: 0.85,
     });
@@ -39,8 +53,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
     const topRisk = analytics.forecast.riskCategories[0];
     insights.push({
       type: 'warning',
-      title: 'Nguy cơ vượt ngân sách',
-      message: `Danh mục ${formatCategoryLabel(topRisk.category)} có nguy cơ vượt hạn mức trong tháng này.`,
+      title: 'Một ngân sách có thể vượt hạn mức',
+      message: `Danh mục ${formatCategoryLabel(topRisk.category)} đang tiến gần hạn mức tháng này. Bạn có thể xem lại trước khi chi thêm.`,
       severity: 'warning',
       confidence: analytics.forecast.confidence || 0.7,
     });
@@ -64,8 +78,8 @@ export function generateRuleBasedInsights(summary, analytics = null) {
     if (average > 0 && latest > average * 1.3) {
       insights.push({
         type: 'trend',
-        title: 'Chi tiêu tăng mạnh',
-        message: `Chi tiêu tháng này cao hơn trung bình gần đây ${Math.round(((latest - average) / average) * 100)}%.`,
+        title: 'Nhịp chi tháng này cao hơn thường lệ',
+        message: `Tháng này đang cao hơn mức gần đây khoảng ${Math.round(((latest - average) / average) * 100)}%. Bạn có thể kiểm tra lại các khoản lớn nhất.`,
         severity: 'warning',
         confidence: 0.8,
       });
@@ -75,14 +89,39 @@ export function generateRuleBasedInsights(summary, analytics = null) {
   if (insights.length === 0) {
     insights.push({
       type: 'positive',
-      title: 'Tài chính đang ổn định',
-      message: 'Dữ liệu hiện tại chưa cho thấy rủi ro lớn bất thường.',
+      title: 'Chi tiêu đang khá ổn định',
+      message: 'Dữ liệu hiện tại chưa cho thấy điểm cần chú ý lớn. Bạn đang kiểm soát khoản này khá tốt.',
       severity: 'positive',
       confidence: 0.7,
     });
   }
 
-  return insights.slice(0, 5);
+  return dedupeInsights(insights).slice(0, 5);
+}
+
+function mapTemporalInsightType(type) {
+  return {
+    improvement: 'improvement',
+    worsening: 'worsening',
+    recurring_rhythm: 'recurring_rhythm',
+    stabilization: 'stabilization',
+    anomaly_shift: 'anomaly_shift',
+    habit_reinforcement: 'habit_reinforcement',
+  }[type] ?? 'trend';
+}
+
+function dedupeInsights(insights) {
+  const seen = new Set();
+  return insights.filter((insight) => {
+    const key = `${insight.type}:${normalize(insight.title)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function normalize(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 function formatCategoryLabel(category) {

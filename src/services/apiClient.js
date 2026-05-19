@@ -122,3 +122,12 @@ export const importApi = {
   },
   commitRoomImport: (roomId, data) => apiClient(`/rooms/${roomId}/import/commit`, { body: data }),
 };
+
+export const adminApi = {
+  getOverview: () => apiClient('/admin/overview'),
+  getImports: () => apiClient('/admin/imports'),
+  getAi: () => apiClient('/admin/ai'),
+  getSecurity: () => apiClient('/admin/security'),
+  getRoom: (roomId) => apiClient(`/admin/rooms/${encodeURIComponent(roomId)}`),
+  getUser: (userId) => apiClient(`/admin/users/${encodeURIComponent(userId)}`),
+};

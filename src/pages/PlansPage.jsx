@@ -517,7 +517,7 @@ export default function PlansPage() {
 
         <ContextualCopilotPanel
           title="Theo dõi kế hoạch"
-          types={['budget_risk', 'spending_velocity']}
+          types={['budget_risk', 'spending_velocity', 'temporal_worsening', 'temporal_improvement']}
         />
 
         {loading && (

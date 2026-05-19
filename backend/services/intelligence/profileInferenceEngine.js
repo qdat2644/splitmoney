@@ -1,4 +1,5 @@
 import * as signals from './profileSignals.js';
+import { buildTemporalSignals } from './temporalSignals.js';
 
 /**
  * Aggregates deterministic signals into a normalized JSON profile structure.
@@ -22,7 +23,8 @@ function inferProfile(data) {
       budgetDiscipline: signals.inferBudgetDiscipline(budgets, expenses, userId),
       paymentReliability: signals.inferPaymentReliability(payments.from),
       planningAccuracy: signals.inferPlanningAccuracy(plans)
-    }
+    },
+    temporalMemory: buildTemporalSignals({ expenses, budgets, userId })
   };
 
   return profile;

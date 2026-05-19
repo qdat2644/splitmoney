@@ -1,12 +1,13 @@
 import { Sparkles } from 'lucide-react';
 import { useCopilotWorkspace } from '../../hooks/useCopilotWorkspace';
+import { dedupeRecommendations } from '../../utils/recommendationDedupe';
 import RecommendationCard from './RecommendationCard';
 
 export default function ContextualCopilotPanel({ title, types, limit = 2 }) {
   const { data, loading } = useCopilotWorkspace();
-  const recommendations = (data?.recommendations ?? [])
-    .filter((item) => types.includes(item.type))
-    .slice(0, limit);
+  const recommendations = dedupeRecommendations(
+    (data?.recommendations ?? []).filter((item) => types.includes(item.type))
+  ).slice(0, limit);
 
   if (loading || recommendations.length === 0) return null;
 

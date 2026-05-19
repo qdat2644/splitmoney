@@ -10,6 +10,7 @@ import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import AppButton from '../components/ui/AppButton';
 import { SkeletonPage } from '../components/ui/Skeleton';
+import { formatCurrency } from '../utils/formatters';
 
 const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Mới nhất' },
@@ -198,7 +199,7 @@ export default function Expenses({ onAddExpense, onEditExpense }) {
           <span>{filtered.length} khoản chi</span>
           <span className="text-gray-400 font-medium">
             Tổng: <span className="gradient-text font-bold text-sm">
-              {filtered.reduce((s, e) => s + e.amount, 0).toLocaleString('vi-VN')}đ
+              {formatCurrency(filtered.reduce((s, e) => s + e.amount, 0))}
             </span>
           </span>
         </div>

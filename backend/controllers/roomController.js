@@ -1,5 +1,6 @@
 import prisma from '../utils/db.js';
 import crypto from 'crypto';
+import { recordOperationalEvent } from '../services/operationalEventService.js';
 
 export const createRoom = async (req, res) => {
   try {
@@ -105,6 +106,14 @@ export const joinRoom = async (req, res) => {
     if (claimGuestMemberId) {
       const guest = await prisma.guestMember.findUnique({ where: { id: claimGuestMemberId } });
       if (!guest || guest.roomId !== room.id || guest.status !== 'active') {
+        recordOperationalEvent({
+          type: 'security.guest_claim_conflict',
+          source: 'security',
+          severity: 'warning',
+          userId,
+          roomId: room.id,
+          metadata: { phase: 'join_request' },
+        }).catch(() => {});
         return res.status(400).json({ error: 'Thành viên ảo không hợp lệ hoặc đã được xác nhận' });
       }
     }
@@ -146,6 +155,14 @@ export const approveMember = async (req, res) => {
     if (member.claimGuestMemberId) {
       const guest = await prisma.guestMember.findUnique({ where: { id: member.claimGuestMemberId } });
       if (!guest || guest.roomId !== roomId || guest.status !== 'active' || guest.claimedByUserId) {
+        recordOperationalEvent({
+          type: 'security.guest_claim_conflict',
+          source: 'security',
+          severity: 'warning',
+          userId,
+          roomId,
+          metadata: { phase: 'approval' },
+        }).catch(() => {});
         return res.status(409).json({ error: 'Yêu cầu nhận diện thành viên ảo không còn khả dụng.' });
       }
       await prisma.guestMember.update({

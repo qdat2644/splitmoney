@@ -298,7 +298,7 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
               </AppCard>
 
               <InsightsWidget />
-              <ContextualCopilotPanel title="Quan sát từ trợ lý AI" types={['debt_attention']} limit={2} />
+              <ContextualCopilotPanel title="Quan sát từ trợ lý AI" types={['debt_attention', 'temporal_worsening', 'temporal_improvement']} limit={2} />
 
               <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
                 <div className="flex items-center gap-2">

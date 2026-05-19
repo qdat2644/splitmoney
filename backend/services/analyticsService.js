@@ -163,8 +163,8 @@ function buildForecast({ monthlyTrend, categoryTrend, roomTrend, currentMonthExp
     confidence: Number(confidence.toFixed(2)),
     assumptions: [
       'Dựa trên chi tiêu từ đầu tháng đến hiện tại.',
-      'Đối chiếu với trung bình tối đa 3 tháng gần nhất.',
-      'Dự báo chỉ mang tính tham khảo, không phải cam kết.',
+      'Đối chiếu với nhịp chi trong tối đa 3 tháng gần nhất.',
+      'Dự báo chỉ để tham khảo và có thể thay đổi khi bạn thêm chi tiêu mới.',
     ],
   };
 }
@@ -208,8 +208,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
   if (priorAverage > 0 && currentMonth > priorAverage * 1.5) {
     anomalies.push({
       type: 'large_expense',
-      title: 'Chi tiêu tháng này tăng mạnh',
-      message: `Tổng chi tháng này cao hơn trung bình gần đây ${Math.round(((currentMonth - priorAverage) / priorAverage) * 100)}%.`,
+      title: 'Chi tiêu tháng này đang cao hơn thường lệ',
+      message: `Tổng chi tháng này cao hơn mức gần đây khoảng ${Math.round(((currentMonth - priorAverage) / priorAverage) * 100)}%. Bạn có thể xem lại vài khoản lớn nếu muốn giữ nhịp chi gọn hơn.`,
       severity: 'warning',
       confidence: 0.82,
     });
@@ -221,8 +221,9 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
     if (previous > 0 && current > previous * 1.6) {
       anomalies.push({
         type: 'category_spike',
-        title: `Danh mục ${formatCategoryLabel(series.category)} tăng đột biến`,
-        message: `Chi tiêu ${formatCategoryLabel(series.category)} cao hơn trung bình gần đây ${Math.round(((current - previous) / previous) * 100)}%.`,
+        category: series.category,
+        title: `Danh mục “${formatCategoryLabel(series.category)}” đang tăng nhanh`,
+        message: `Chi tiêu ${formatCategoryLabel(series.category)} cao hơn mức gần đây khoảng ${Math.round(((current - previous) / previous) * 100)}%.`,
         severity: 'warning',
         confidence: 0.84,
       });
@@ -235,8 +236,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
     if (previous > 0 && current > previous * 1.6) {
       anomalies.push({
         type: 'room_spike',
-        title: `Phòng ${series.roomName} tăng chi tiêu`,
-        message: `Chi tiêu phòng này cao hơn trung bình gần đây ${Math.round(((current - previous) / previous) * 100)}%.`,
+        title: `Phòng ${series.roomName} đang chi nhiều hơn`,
+        message: `Chi tiêu phòng này cao hơn mức gần đây khoảng ${Math.round(((current - previous) / previous) * 100)}%.`,
         severity: 'warning',
         confidence: 0.82,
       });
@@ -250,7 +251,7 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
       anomalies.push({
         type: 'large_expense',
         title: entry.expense.title,
-        message: 'Khoản chi này lớn hơn đáng kể so với mức chi thường thấy gần đây.',
+        message: 'Khoản này cao hơn nhịp chi thường thấy. Có thể chỉ cần kiểm tra lại nếu đây không phải chi tiêu có kế hoạch.',
         severity: 'info',
         confidence: 0.76,
       });
@@ -260,8 +261,8 @@ function detectAnomalies({ monthlyTrend, categoryTrend, roomTrend, currentMonthE
   if (debtHealth.direction === 'worsening') {
     anomalies.push({
       type: 'debt_spike',
-      title: 'Công nợ đang tăng',
-      message: 'Dòng tiền thanh toán gần đây cho thấy số nợ đang xấu đi.',
+      title: 'Công nợ đang cần chú ý',
+      message: 'Số dư ròng đang đi xuống so với giai đoạn trước. Xem lại các khoản thanh toán có thể giúp mọi thứ rõ ràng hơn.',
       severity: 'warning',
       confidence: 0.72,
     });

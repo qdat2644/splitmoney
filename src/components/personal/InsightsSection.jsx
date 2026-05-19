@@ -34,7 +34,7 @@ export default function InsightsSection() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-400" />
-          <h3 className="text-sm font-semibold text-gray-200">Phân tích tài chính AI</h3>
+          <h3 className="text-sm font-semibold text-gray-200">Trợ lý AI</h3>
           {data && !loading && (
             <span className="flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-gray-500">
               {data.source === 'ai' ? (
@@ -54,7 +54,7 @@ export default function InsightsSection() {
           <button
             onClick={refetch}
             className="btn-icon h-7 w-7 text-gray-500 hover:text-gray-300"
-            title="Làm mới phân tích"
+            title="Làm mới gợi ý"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>

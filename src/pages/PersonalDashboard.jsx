@@ -17,6 +17,7 @@ import { useDashboardSummary } from '../hooks/useDashboardSummary';
 import { useBudgets } from '../hooks/useBudgets';
 import { useCopilotWorkspace } from '../hooks/useCopilotWorkspace';
 import { formatCurrency } from '../utils/formatters';
+import { compareRecommendationPriority, dedupeRecommendations, excludeSimilarRecommendations } from '../utils/recommendationDedupe';
 import { exportApi } from '../services/apiClient';
 
 import NetBalanceHero from '../components/personal/NetBalanceHero';
@@ -37,7 +38,6 @@ import AppCard from '../components/ui/AppCard';
 import AnalyticsDashboard from '../components/personal/AnalyticsDashboard';
 import RecommendationCard from '../components/copilot/RecommendationCard';
 
-const severityRank = { critical: 0, warning: 1, info: 2 };
 const categoryLabels = {
   food: 'ăn uống',
   drinks: 'đồ uống',
@@ -65,10 +65,14 @@ export default function PersonalDashboard() {
   const { status: budgetStatus } = useBudgets();
   const { data: copilotData } = useCopilotWorkspace();
 
-  const topPriorities = [...(copilotData?.recommendations ?? [])]
-    .sort((a, b) => (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9) || b.confidence - a.confidence)
+  const uniqueRecommendations = dedupeRecommendations(copilotData?.recommendations ?? []);
+  const topPriorities = [...uniqueRecommendations]
+    .sort(compareRecommendationPriority)
     .slice(0, 4);
-  const topOpportunities = (copilotData?.opportunities ?? []).slice(0, 2);
+  const topOpportunities = excludeSimilarRecommendations(
+    dedupeRecommendations(copilotData?.opportunities ?? []),
+    topPriorities
+  ).slice(0, 2);
   const narrative = buildPersonalNarrative({ data, copilotData, budgetStatus });
 
   const greeting = () => {
@@ -276,7 +280,7 @@ function ForecastSnapshot({ data }) {
       <div className="space-y-3">
         <Metric label="Cuối tháng" value={formatCurrency(snapshot.forecastMonthTotal || 0, true)} />
         <Metric label="Chi mỗi ngày" value={formatCurrency(snapshot.spendingVelocity?.dailyAverage || 0, true)} />
-        <Metric label="Ngân sách có rủi ro" value={`${snapshot.budgetHealth?.atRiskCount ?? 0}`} />
+        <Metric label="Ngân sách cần chú ý" value={`${snapshot.budgetHealth?.atRiskCount ?? 0}`} />
       </div>
     </AppCard>
   );
@@ -296,9 +300,33 @@ function FinancialMemory({ data }) {
         <Metric label="Phong cách" value={formatMemoryValue(memory.spendingStyle?.type)} />
         <Metric label="Biến động" value={formatMemoryValue(memory.volatility?.level)} />
         <Metric label="Kỷ luật" value={formatMemoryValue(memory.budgetDiscipline?.level)} />
+        <Metric label="Theo thời gian" value={memory.recentTrendSummary?.label || 'chưa rõ'} />
         <Metric label="Danh mục nổi bật" value={formatCategoryList(memory.topCategories)} />
       </div>
+      <TemporalPills memory={memory} />
     </AppCard>
+  );
+}
+
+function TemporalPills({ memory }) {
+  const pills = [
+    memory?.historicalComparisons?.monthOverMonth?.confidence >= 0.55 ? 'So với tháng trước' : null,
+    memory?.historicalComparisons?.rolling7DayTrend?.confidence >= 0.55 ? '7 ngày gần đây' : null,
+    memory?.recentTrendSummary?.type === 'stabilization' ? 'Ổn định hơn' : null,
+    memory?.worseningAreas?.length > 0 ? 'Tăng dần' : null,
+    memory?.recurringPatterns?.length > 0 ? 'Theo chu kỳ' : null,
+  ].filter(Boolean).slice(0, 4);
+
+  if (pills.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {pills.map((pill) => (
+        <span key={pill} className="rounded-full bg-white/5 px-2 py-1 text-[11px] text-gray-400">
+          {pill}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -323,6 +351,8 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
   const topRecommendation = copilotData?.recommendations?.[0];
   const overBudgetCount = budgetStatus?.budgets?.filter((budget) => budget.overBudget).length ?? 0;
   const atRiskCount = copilotData?.forecastSnapshot?.budgetHealth?.atRiskCount ?? 0;
+  const trend = copilotData?.financialMemory?.recentTrendSummary;
+  const rhythm = copilotData?.financialMemory?.spendingRhythm?.weekdayWeekend;
 
   if (topRecommendation?.severity === 'critical') {
     return {
@@ -345,6 +375,30 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
       eyebrow: 'Nhịp chi tiêu',
       headline: 'Chi tiêu đang tăng nhanh hơn bình thường.',
       guidance: topRecommendation.description,
+    };
+  }
+
+  if (trend?.confidence >= 0.55 && trend.type === 'stabilization') {
+    return {
+      eyebrow: 'Ổn định hơn',
+      headline: 'Nhịp chi gần đây đang đều hơn trước.',
+      guidance: 'Zyra thấy tín hiệu này từ dữ liệu theo thời gian, không phải từ một giao dịch riêng lẻ.',
+    };
+  }
+
+  if (trend?.confidence >= 0.55 && trend.type === 'improvement') {
+    return {
+      eyebrow: 'So với tháng trước',
+      headline: 'Chi tiêu gần đây đang nhẹ hơn giai đoạn trước.',
+      guidance: 'Bạn có thể tiếp tục giữ nhịp hiện tại nếu nó phù hợp với kế hoạch tháng này.',
+    };
+  }
+
+  if (rhythm?.confidence >= 0.55 && rhythm.direction === 'weekend_higher') {
+    return {
+      eyebrow: 'Theo chu kỳ',
+      headline: 'Cuối tuần vẫn là thời điểm chi tiêu cao hơn.',
+      guidance: 'Đây là nhịp lặp từ dữ liệu chi tiêu, hữu ích khi bạn muốn lên kế hoạch trước.',
     };
   }
 

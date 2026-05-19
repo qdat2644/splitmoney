@@ -1,10 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../utils/db.js';
 import crypto from 'crypto';
+import prisma from '../utils/db.js';
+import { env } from '../config/env.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
-
-const JWT_SECRET = process.env.JWT_SECRET;
+import { recordOperationalEvent } from '../services/operationalEventService.js';
+import { logger } from '../utils/logger.js';
 
 export const register = async (req, res) => {
   try {
@@ -17,13 +18,18 @@ export const register = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { name, email, passwordHash },
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true, role: true },
     });
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ user, token });
+    const token = jwt.sign({ userId: user.id }, env.jwtSecret, { expiresIn: '7d' });
+    return res.status(201).json({ user, token });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể tạo tài khoản lúc này.' });
+    logger.error('auth_register_failed', {
+      message: error.message,
+      code: error.code,
+      stack: env.nodeEnv === 'development' ? error.stack : undefined,
+    });
+    return res.status(500).json({ error: 'Không thể tạo tài khoản lúc này.' });
   }
 };
 
@@ -31,15 +37,38 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(400).json({ error: 'Email hoặc mật khẩu không đúng.' });
+
+    if (!user) {
+      recordOperationalEvent({
+        type: 'security.auth_failed',
+        source: 'auth',
+        severity: 'warning',
+        metadata: { reason: 'unknown_email', emailDomain: emailDomain(email) },
+      }).catch(() => {});
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng.' });
+    }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(400).json({ error: 'Email hoặc mật khẩu không đúng.' });
+    if (!valid) {
+      recordOperationalEvent({
+        type: 'security.auth_failed',
+        source: 'auth',
+        severity: 'warning',
+        userId: user.id,
+        metadata: { reason: 'invalid_password', emailDomain: emailDomain(email) },
+      }).catch(() => {});
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng.' });
+    }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
+    const token = jwt.sign({ userId: user.id }, env.jwtSecret, { expiresIn: '7d' });
+    return res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể đăng nhập lúc này.' });
+    logger.error('auth_login_failed', {
+      message: error.message,
+      code: error.code,
+      stack: env.nodeEnv === 'development' ? error.stack : undefined,
+    });
+    return res.status(500).json({ error: 'Không thể đăng nhập lúc này.' });
   }
 };
 
@@ -47,12 +76,17 @@ export const getMe = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true, role: true },
     });
     if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
-    res.json({ user });
+    return res.json({ user });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể tải thông tin tài khoản.' });
+    logger.error('auth_me_failed', {
+      message: error.message,
+      code: error.code,
+      stack: env.nodeEnv === 'development' ? error.stack : undefined,
+    });
+    return res.status(500).json({ error: 'Không thể tải thông tin tài khoản.' });
   }
 };
 
@@ -60,20 +94,25 @@ export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' }); // prevent enum
+    if (!user) return res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' });
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.passwordResetToken.create({
-      data: { userId: user.id, tokenHash, expiresAt }
+      data: { userId: user.id, tokenHash, expiresAt },
     });
 
     await sendPasswordResetEmail(email, resetToken);
-    res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' });
+    return res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể xử lý yêu cầu đặt lại mật khẩu.' });
+    logger.error('auth_forgot_password_failed', {
+      message: error.message,
+      code: error.code,
+      stack: env.nodeEnv === 'development' ? error.stack : undefined,
+    });
+    return res.status(500).json({ error: 'Không thể xử lý yêu cầu đặt lại mật khẩu.' });
   }
 };
 
@@ -83,9 +122,8 @@ export const resetPassword = async (req, res) => {
     if (!token || !newPassword) return res.status(400).json({ error: 'Thiếu mã đặt lại hoặc mật khẩu mới.' });
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-
     const resetTokenDoc = await prisma.passwordResetToken.findUnique({
-      where: { tokenHash }
+      where: { tokenHash },
     });
 
     if (!resetTokenDoc || resetTokenDoc.usedAt || resetTokenDoc.expiresAt < new Date()) {
@@ -93,20 +131,25 @@ export const resetPassword = async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    
+
     await prisma.user.update({
       where: { id: resetTokenDoc.userId },
-      data: { passwordHash }
+      data: { passwordHash },
     });
 
     await prisma.passwordResetToken.update({
       where: { id: resetTokenDoc.id },
-      data: { usedAt: new Date() }
+      data: { usedAt: new Date() },
     });
 
-    res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+    return res.json({ success: true, message: 'Đổi mật khẩu thành công' });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể đặt lại mật khẩu lúc này.' });
+    logger.error('auth_reset_password_failed', {
+      message: error.message,
+      code: error.code,
+      stack: env.nodeEnv === 'development' ? error.stack : undefined,
+    });
+    return res.status(500).json({ error: 'Không thể đặt lại mật khẩu lúc này.' });
   }
 };
 
@@ -137,8 +180,18 @@ export const changePassword = async (req, res) => {
     const newHash = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
 
-    res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
+    return res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
   } catch (error) {
-    res.status(500).json({ error: 'Không thể đổi mật khẩu lúc này.' });
+    logger.error('auth_change_password_failed', {
+      message: error.message,
+      code: error.code,
+      stack: env.nodeEnv === 'development' ? error.stack : undefined,
+    });
+    return res.status(500).json({ error: 'Không thể đổi mật khẩu lúc này.' });
   }
 };
+
+function emailDomain(email) {
+  if (!email || !email.includes('@')) return null;
+  return email.split('@').pop();
+}

@@ -1,11 +1,18 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
+import { recordOperationalEvent } from '../services/operationalEventService.js';
 
 export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logger.warn('auth_failed', { reason: 'missing_token' });
+    recordOperationalEvent({
+      type: 'security.auth_failed',
+      source: 'auth',
+      severity: 'warning',
+      metadata: { reason: 'missing_token', path: req.originalUrl },
+    }).catch(() => {});
     return res.status(401).json({ error: 'Bạn cần đăng nhập để tiếp tục.' });
   }
 
@@ -16,6 +23,12 @@ export const requireAuth = (req, res, next) => {
     next();
   } catch (err) {
     logger.warn('auth_failed', { reason: 'invalid_token' });
+    recordOperationalEvent({
+      type: 'security.auth_failed',
+      source: 'auth',
+      severity: 'warning',
+      metadata: { reason: 'invalid_token', path: req.originalUrl },
+    }).catch(() => {});
     return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ.' });
   }
 };

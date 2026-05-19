@@ -108,7 +108,7 @@ export default function PlannedExpensesList() {
                 <Clock className="w-3.5 h-3.5 text-gray-500 shrink-0 mt-0.5" />
               </div>
               <p className="text-sm font-bold text-blue-400">
-                {plan.estimatedAmount.toLocaleString('vi-VN')}đ
+                {formatCurrency(plan.estimatedAmount)}
               </p>
             </div>
             

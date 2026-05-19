@@ -69,8 +69,8 @@ export default function AnalyticsDashboard() {
     <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-white">Phân tích nâng cao</h2>
-          <p className="text-xs text-gray-500">Dự báo, nhịp chi tiêu, khoản lặp lại và bất thường</p>
+          <h2 className="text-base font-semibold text-white">Dự báo và xu hướng</h2>
+          <p className="text-xs text-gray-500">Nhịp chi tiêu, khoản lặp lại và các điểm cần chú ý</p>
         </div>
         <button onClick={refetch} className="btn-icon text-gray-500 hover:text-gray-300" title="Làm mới">
           <RefreshCw className="h-4 w-4" />
@@ -80,7 +80,7 @@ export default function AnalyticsDashboard() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Dự báo cuối tháng" value={formatCurrency(forecast.forecastMonthTotal, true)} meta={`Tin cậy ${Math.round((forecast.confidence || 0) * 100)}%`} />
         <MetricCard label="Tốc độ chi/ngày" value={formatCurrency(spendingVelocity.dailyAverage || 0, true)} meta={`Đã qua ${spendingVelocity.daysElapsed || 0}/${spendingVelocity.daysInMonth || 0} ngày`} tone="emerald" />
-        <MetricCard label="Ngân sách có rủi ro" value={budgetHealth.atRiskCount ?? 0} meta={`${budgetHealth.overBudgetCount ?? 0} đã vượt`} tone={budgetHealth.overBudgetCount ? 'red' : budgetHealth.atRiskCount ? 'amber' : 'emerald'} />
+        <MetricCard label="Ngân sách cần chú ý" value={budgetHealth.atRiskCount ?? 0} meta={`${budgetHealth.overBudgetCount ?? 0} đã vượt`} tone={budgetHealth.overBudgetCount ? 'red' : budgetHealth.atRiskCount ? 'amber' : 'emerald'} />
         <MetricCard label="Xu hướng nợ" value={debtHealth.direction === 'improving' ? 'Cải thiện' : debtHealth.direction === 'worsening' ? 'Xấu đi' : 'Ổn định'} meta={formatCurrency(debtHealth.currentNetBalance || 0, true)} tone={debtHealth.direction === 'worsening' ? 'red' : debtHealth.direction === 'improving' ? 'emerald' : 'blue'} />
       </div>
 
@@ -98,7 +98,7 @@ export default function AnalyticsDashboard() {
                 <LineChart data={data.monthlyTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} width={42} tickFormatter={(value) => value >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : `${Math.round(value / 1000)}k`} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} width={48} tickFormatter={(value) => formatCurrency(value, true)} />
                   <Tooltip content={<TrendTooltip />} />
                   <Line type="monotone" dataKey="amount" stroke="#60a5fa" strokeWidth={2.5} dot={{ r: 3 }} />
                 </LineChart>
@@ -111,7 +111,7 @@ export default function AnalyticsDashboard() {
           <div className="glass-card border border-white/5 p-5">
             <div className="mb-3 flex items-center gap-2">
               <CalendarClock className="h-4 w-4 text-amber-400" />
-              <h3 className="text-sm font-semibold text-white">Rủi ro ngân sách</h3>
+              <h3 className="text-sm font-semibold text-white">Ngân sách cần chú ý</h3>
             </div>
             {forecast.riskCategories.length === 0 ? <EmptyBlock>Chưa thấy danh mục có nguy cơ vượt hạn.</EmptyBlock> : (
               <div className="space-y-2">
@@ -168,9 +168,9 @@ export default function AnalyticsDashboard() {
         <div className="glass-card border border-white/5 p-5">
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-400" />
-            <h3 className="text-sm font-semibold text-white">Bất thường</h3>
+            <h3 className="text-sm font-semibold text-white">Cần chú ý</h3>
           </div>
-          {data.anomalies.length === 0 ? <EmptyBlock>Chưa phát hiện bất thường đáng kể.</EmptyBlock> : (
+          {data.anomalies.length === 0 ? <EmptyBlock>Chưa có điểm nào cần chú ý thêm.</EmptyBlock> : (
             <div className="space-y-2">
               {data.anomalies.map((item, index) => (
                 <div key={`${item.type}-${index}`} className="rounded-lg border border-white/5 bg-white/3 px-3 py-2">

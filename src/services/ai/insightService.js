@@ -1,42 +1,52 @@
+import { formatCurrency } from '../../utils/formatters';
+
+const categoryLabels = {
+  cafe: 'cafe/trà sữa',
+  food: 'ăn uống',
+  drinks: 'đồ uống',
+  transport: 'di chuyển',
+  shopping: 'mua sắm',
+  entertainment: 'giải trí',
+  other: 'khác',
+};
+
 export function generateInsights(expenses, members, currentUser) {
   const insights = [];
-  
+
   if (!expenses.length) return insights;
 
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
-  
+
   const thisMonthExpenses = expenses.filter(e => {
     const d = new Date(e.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
-  
+
   const lastMonthExpenses = expenses.filter(e => {
     const d = new Date(e.date);
-    return d.getMonth() === (currentMonth - 1 < 0 ? 11 : currentMonth - 1) && 
+    return d.getMonth() === (currentMonth - 1 < 0 ? 11 : currentMonth - 1) &&
            d.getFullYear() === (currentMonth - 1 < 0 ? currentYear - 1 : currentYear);
   });
 
-  // 1. Spending comparison
   const thisMonthTotal = thisMonthExpenses.reduce((s, e) => s + e.amount, 0);
   const lastMonthTotal = lastMonthExpenses.reduce((s, e) => s + e.amount, 0);
-  
+
   if (lastMonthTotal > 0) {
     const percentChange = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal * 100).toFixed(0);
     if (percentChange > 10) {
-      insights.push(`Chi tiêu tháng này đã tăng ${percentChange}% so với tháng trước.`);
+      insights.push(`Chi tiêu tháng này đang cao hơn tháng trước khoảng ${percentChange}%. Bạn có thể xem lại vài khoản lớn nhất.`);
     } else if (percentChange < -10) {
-      insights.push(`Tuyệt vời! Chi tiêu tháng này giảm ${Math.abs(percentChange)}% so với tháng trước.`);
+      insights.push(`Chi tiêu tháng này giảm khoảng ${Math.abs(percentChange)}% so với tháng trước. Nhịp hiện tại đang khá ổn.`);
     }
   }
 
-  // 2. Category spike (e.g. cafe, food)
   const categoryCurrent = {};
   thisMonthExpenses.forEach(e => {
     categoryCurrent[e.category || 'other'] = (categoryCurrent[e.category || 'other'] || 0) + e.amount;
   });
-  
+
   const categoryLast = {};
   lastMonthExpenses.forEach(e => {
     categoryLast[e.category || 'other'] = (categoryLast[e.category || 'other'] || 0) + e.amount;
@@ -46,24 +56,20 @@ export function generateInsights(expenses, members, currentUser) {
     if (categoryLast[cat] && categoryLast[cat] > 0) {
       const spike = ((categoryCurrent[cat] - categoryLast[cat]) / categoryLast[cat] * 100);
       if (spike > 50 && categoryCurrent[cat] > 200000) {
-        let catName = cat;
-        if (cat === 'cafe') catName = 'Cafe/Trà sữa';
-        if (cat === 'food') catName = 'Ăn uống';
-        insights.push(`Chú ý: Chi tiêu cho ${catName} đang tăng đột biến (${spike.toFixed(0)}%).`);
+        const catName = categoryLabels[cat] ?? cat;
+        insights.push(`Chi tiêu cho ${catName} đang cao hơn tháng trước khoảng ${spike.toFixed(0)}%. Có thể đáng để đặt hạn mức riêng.`);
       }
     }
   });
 
-  // 3. Current User vs Average
   if (currentUser && members.length > 0) {
     const userPaid = thisMonthExpenses.filter(e => e.paidBy === currentUser.id).reduce((s, e) => s + e.amount, 0);
     const avgPaid = thisMonthTotal / members.length;
     if (userPaid > avgPaid * 1.5 && userPaid > 0) {
-      insights.push(`Bạn đang trả tiền nhiều hơn mức trung bình của nhóm trong tháng này.`);
+      insights.push(`Bạn đang trả trước cho nhóm nhiều hơn mức trung bình. Tổng đã trả khoảng ${formatCurrency(userPaid)} trong tháng này.`);
     }
   }
 
-  // 4. Weekend vs Weekday
   let weekendTotal = 0;
   let weekdayTotal = 0;
   thisMonthExpenses.forEach(e => {
@@ -71,12 +77,11 @@ export function generateInsights(expenses, members, currentUser) {
     if (day === 0 || day === 6) weekendTotal += e.amount;
     else weekdayTotal += e.amount;
   });
-  
+
   if (weekendTotal > weekdayTotal && weekendTotal > 0) {
-    insights.push(`Hầu hết chi tiêu của nhóm diễn ra vào cuối tuần.`);
+    insights.push('Chi tiêu của nhóm tập trung nhiều hơn vào cuối tuần. Điều này có thể hữu ích khi bạn lên kế hoạch trước.');
   }
 
-  // 5. Smart Suggestions (Frequency based)
   if (thisMonthExpenses.length > 5) {
     const titleCounts = {};
     thisMonthExpenses.forEach(e => {
@@ -86,8 +91,8 @@ export function generateInsights(expenses, members, currentUser) {
 
     for (const [title, count] of Object.entries(titleCounts)) {
       if (count >= 3) {
-        insights.push(`Gợi ý: Nhóm bạn thường xuyên chi tiêu cho "${title}" (${count} lần). Bạn có muốn tạo Kế hoạch chi tiêu cho mục này?`);
-        break; // just one suggestion to not overwhelm
+        insights.push(`Bạn đang chi cho “${title}” khá đều (${count} lần). Một hạn mức nhỏ sẽ giúp theo dõi dễ hơn.`);
+        break;
       }
     }
   }

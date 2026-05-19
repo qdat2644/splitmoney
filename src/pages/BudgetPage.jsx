@@ -94,7 +94,7 @@ export default function BudgetPage() {
 
         <ContextualCopilotPanel
           title="Theo dõi ngân sách"
-          types={['budget_risk', 'budget_suggestion', 'recurring_expense']}
+          types={['budget_risk', 'budget_suggestion', 'recurring_expense', 'temporal_category_growth', 'temporal_recurring_rhythm']}
         />
 
         {/* Loading */}

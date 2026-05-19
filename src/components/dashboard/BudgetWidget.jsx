@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Target, AlertTriangle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CATEGORIES } from '../../data/mockData';
+import { formatCurrency } from '../../utils/formatters';
 
 export default function BudgetWidget() {
   const { budgets = [], expenses = [] } = useApp();
@@ -54,7 +55,7 @@ export default function BudgetWidget() {
                 {b.category === 'all' ? b.title : CATEGORIES.find(c => c.id === b.category)?.label || 'Khác'}
               </span>
               <span className="text-xs text-gray-400">
-                <span className={b.percent > 80 ? "text-orange-400 font-bold" : "text-gray-300"}>{b.spent.toLocaleString('vi-VN')}đ</span> / {b.amount.toLocaleString('vi-VN')}đ
+                <span className={b.percent > 80 ? "text-orange-400 font-bold" : "text-gray-300"}>{formatCurrency(b.spent)}</span> / {formatCurrency(b.amount)}
               </span>
             </div>
             {/* Progress bar */}

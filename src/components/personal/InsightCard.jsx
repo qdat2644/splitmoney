@@ -4,6 +4,7 @@ import {
   AlertTriangle, CheckCircle2, Info,
   TrendingUp, TrendingDown, Lightbulb, CreditCard
 } from 'lucide-react';
+import { formatCurrencyText } from '../../utils/formatters';
 
 const TYPE_ICON = {
   spending:   CreditCard,
@@ -12,6 +13,12 @@ const TYPE_ICON = {
   suggestion: Lightbulb,
   positive:   CheckCircle2,
   warning:    AlertTriangle,
+  improvement: CheckCircle2,
+  worsening: AlertTriangle,
+  recurring_rhythm: TrendingUp,
+  stabilization: CheckCircle2,
+  anomaly_shift: AlertTriangle,
+  habit_reinforcement: CheckCircle2,
 };
 
 const SEVERITY_STYLE = {
@@ -38,6 +45,15 @@ const SEVERITY_STYLE = {
   },
 };
 
+const TEMPORAL_LABELS = {
+  improvement: 'So với trước',
+  worsening: 'Tăng dần',
+  recurring_rhythm: 'Theo chu kỳ',
+  stabilization: 'Ổn định hơn',
+  anomaly_shift: 'Có thay đổi',
+  habit_reinforcement: 'Duy trì tốt',
+};
+
 export default function InsightCard({ insight, index }) {
   const style = SEVERITY_STYLE[insight.severity] || SEVERITY_STYLE.info;
   const Icon = TYPE_ICON[insight.type] || Info;
@@ -56,16 +72,22 @@ export default function InsightCard({ insight, index }) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white leading-tight">{insight.title}</p>
-        <p className="text-xs text-gray-400 mt-1 leading-relaxed">{insight.message}</p>
+        <p className="text-sm font-semibold text-white leading-tight">{formatCurrencyText(insight.title)}</p>
+        <p className="text-xs text-gray-400 mt-1 leading-relaxed">{formatCurrencyText(insight.message)}</p>
       </div>
 
-      {/* Confidence badge — only show if AI-generated and high confidence */}
-      {insight.confidence >= 0.85 && (
-        <div className={`text-[10px] px-2 py-0.5 rounded-full h-fit shrink-0 font-medium ${style.badge}`}>
-          {Math.round(insight.confidence * 100)}%
-        </div>
-      )}
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {TEMPORAL_LABELS[insight.type] && (
+          <div className={`h-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${style.badge}`}>
+            {TEMPORAL_LABELS[insight.type]}
+          </div>
+        )}
+        {insight.confidence >= 0.85 && (
+          <div className={`h-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${style.badge}`}>
+            {Math.round(insight.confidence * 100)}%
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }

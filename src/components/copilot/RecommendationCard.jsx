@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowRight, CircleAlert, Info, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrencyText } from '../../utils/formatters';
 import AppButton from '../ui/AppButton';
 
 const severityStyle = {
@@ -20,9 +21,15 @@ const severityStyle = {
   },
 };
 const severityLabels = {
-  critical: 'Khẩn cấp',
-  warning: 'Cảnh báo',
-  info: 'Thông tin',
+  critical: 'Cần chú ý',
+  warning: 'Cần chú ý',
+  info: 'Gợi ý',
+};
+const personalityLabels = {
+  gentle_warning: 'Cần chú ý',
+  supportive_guidance: 'Gợi ý',
+  positive_reinforcement: 'Ổn định',
+  opportunity_suggestion: 'Cơ hội',
 };
 const actionLabels = {
   open_budget: 'Xem ngân sách',
@@ -37,6 +44,10 @@ export default function RecommendationCard({ recommendation, compact = false }) 
   const navigate = useNavigate();
   const style = severityStyle[recommendation.severity] ?? severityStyle.info;
   const Icon = style.icon;
+  const label = personalityLabels[recommendation.personality] ?? severityLabels[recommendation.severity] ?? severityLabels.info;
+  const title = formatCurrencyText(recommendation.title);
+  const description = formatCurrencyText(recommendation.description);
+  const evidence = (recommendation.evidence ?? []).map((item) => formatCurrencyText(item));
 
   return (
     <article className={`rounded-xl border bg-white/3 p-4 transition-colors hover:bg-white/[0.04] ${style.border}`}>
@@ -44,21 +55,21 @@ export default function RecommendationCard({ recommendation, compact = false }) 
         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-300" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-white">{recommendation.title}</h3>
+            <h3 className="text-sm font-semibold text-white">{title}</h3>
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${style.badge}`}>
-              {severityLabels[recommendation.severity] ?? severityLabels.info}
+              {label}
             </span>
             <span className="text-[10px] text-gray-500">{Math.round(recommendation.confidence * 100)}%</span>
           </div>
-          <p className="mt-1 text-sm text-gray-400">{recommendation.description}</p>
-          {!compact && recommendation.evidence?.length > 0 && (
+          <p className="mt-1 text-sm text-gray-400">{description}</p>
+          {!compact && evidence.length > 0 && (
             <div className="mt-3">
               <p className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
                 <Sparkles className="h-3 w-3" />
-                Vì sao xuất hiện
+                Cơ sở gợi ý
               </p>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {recommendation.evidence.map((item) => (
+                {evidence.map((item) => (
                   <span key={item} className="rounded-full bg-white/5 px-2 py-1 text-[11px] text-gray-400">
                     {item}
                   </span>
