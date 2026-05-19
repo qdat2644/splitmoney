@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  Activity, Brain, Building2, LockKeyhole, RefreshCw, Shield,
-  UploadCloud, Users, FileText,
-} from 'lucide-react';
-import AppCard from '../../components/ui/AppCard';
+import { RefreshCw } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import { adminApi } from '../../services/apiClient';
 import AdminOverviewTab from './AdminOverviewTab';
@@ -16,13 +12,13 @@ import AdminSecurityTab from './AdminSecurityTab';
 import AdminAuditTab from './AdminAuditTab';
 
 const tabs = [
-  { key: '', label: 'Tổng quan', icon: Activity, path: '/admin' },
-  { key: 'ai', label: 'AI', icon: Brain, path: '/admin/ai' },
-  { key: 'imports', label: 'Nhập dữ liệu', icon: UploadCloud, path: '/admin/imports' },
-  { key: 'rooms', label: 'Nhóm', icon: Building2, path: '/admin/rooms' },
-  { key: 'users', label: 'Người dùng', icon: Users, path: '/admin/users' },
-  { key: 'security', label: 'Bảo mật', icon: Shield, path: '/admin/security' },
-  { key: 'audit', label: 'Nhật ký', icon: FileText, path: '/admin/audit' },
+  { key: '', label: 'Tổng quan', path: '/admin' },
+  { key: 'ai', label: 'AI', path: '/admin/ai' },
+  { key: 'imports', label: 'Nhập dữ liệu', path: '/admin/imports' },
+  { key: 'rooms', label: 'Nhóm', path: '/admin/rooms' },
+  { key: 'users', label: 'Người dùng', path: '/admin/users' },
+  { key: 'security', label: 'Bảo mật', path: '/admin/security' },
+  { key: 'audit', label: 'Nhật ký', path: '/admin/audit' },
 ];
 
 export default function AdminWorkspace() {
@@ -32,6 +28,7 @@ export default function AdminWorkspace() {
   // Derive active tab from URL
   const pathSegment = location.pathname.replace('/admin', '').replace(/^\//, '').split('/')[0] || '';
   const activeTab = tabs.find(t => t.key === pathSegment) ? pathSegment : '';
+  const activeLabel = tabs.find(t => t.key === activeTab)?.label ?? 'Tổng quan';
 
   // Shared data loading
   const [overviewData, setOverviewData] = useState(null);
@@ -91,14 +88,36 @@ export default function AdminWorkspace() {
         title="Bảng điều hành vận hành"
         subtitle="Theo dõi hệ thống, AI, nhập dữ liệu, nhóm và tín hiệu bảo mật ở mức tổng hợp."
         actions={(
-          <button
-            type="button"
-            onClick={loadOverview}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-zinc-200 hover:bg-white/[0.07] transition-colors"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Làm mới
-          </button>
+          <>
+            {/* Compact section switcher */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
+              <span className="text-[11px] text-zinc-500 shrink-0">Phân hệ:</span>
+              <select
+                value={activeTab}
+                onChange={(e) => {
+                  const tab = tabs.find(t => t.key === e.target.value);
+                  if (tab) navigate(tab.path);
+                }}
+                className="bg-transparent text-xs font-medium text-zinc-200 outline-none cursor-pointer"
+              >
+                {tabs.map(t => (
+                  <option key={t.key} value={t.key} className="bg-zinc-900 text-zinc-200">
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Refresh */}
+            <button
+              type="button"
+              onClick={loadOverview}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-white/[0.07] transition-colors"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Làm mới
+            </button>
+          </>
         )}
       />
 
@@ -107,28 +126,6 @@ export default function AdminWorkspace() {
           {error}
         </div>
       )}
-
-      {/* Tab Navigation */}
-      <div className="flex gap-1 overflow-x-auto rounded-lg border border-white/5 bg-white/[0.02] p-1">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => navigate(tab.path)}
-              className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                isActive
-                  ? 'bg-white/[0.08] text-white border border-white/10'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03] border border-transparent'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
 
       {renderTab()}
     </main>
