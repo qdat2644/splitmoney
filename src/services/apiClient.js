@@ -30,7 +30,15 @@ export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
   }
 
   if (!response.ok) {
-    throw new Error(data?.error || data?.message || 'Yêu cầu không thành công.');
+    // Backend uses two shapes:
+    //   { error: "message string" }           — auth/controller errors
+    //   { error: true, message: "..." }        — errorHandler / rateLimiters
+    // We must never pass a boolean to new Error() — it becomes the string "true".
+    const errorString =
+      (typeof data?.error === 'string' && data.error.length > 0 ? data.error : null) ||
+      (typeof data?.message === 'string' && data.message.length > 0 ? data.message : null) ||
+      'Yêu cầu không thành công.';
+    throw new Error(errorString);
   }
 
   return data;
