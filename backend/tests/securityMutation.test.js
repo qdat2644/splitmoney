@@ -10,6 +10,9 @@ vi.mock('../utils/db.js', () => ({ default: prisma }));
 vi.mock('../services/intelligence/personalFinanceProfileService.js', () => ({
   invalidateProfileCache: vi.fn(() => Promise.resolve()),
 }));
+vi.mock('../services/copilot/copilotEngine.js', () => ({
+  clearCopilotCache: vi.fn(),
+}));
 
 const { updateExpense, deleteExpense } = await import('../controllers/expenseController.js');
 const { updateGuest, deleteGuest } = await import('../controllers/guestController.js');

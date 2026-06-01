@@ -11,6 +11,9 @@ vi.mock('../utils/db.js', () => ({ default: prisma }));
 vi.mock('../services/intelligence/personalFinanceProfileService.js', () => ({
   invalidateProfileCache: vi.fn(() => Promise.resolve()),
 }));
+vi.mock('../services/copilot/copilotEngine.js', () => ({
+  clearCopilotCache: vi.fn(),
+}));
 
 const {
   parseWorkbookBuffer,

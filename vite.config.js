@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    include: ['src/**/*.test.{js,jsx}'],
+    environment: 'node',
+  },
   server: {
     allowedHosts: true,
     proxy: {
@@ -17,12 +21,13 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('/react-dom/') || id.includes('/react/')) return 'vendor-react';
-          if (id.includes('/react-router') || id.includes('/react-router-dom')) return 'vendor-router';
-          if (id.includes('/recharts/') || id.includes('/d3-')) return 'vendor-recharts';
-          if (id.includes('/framer-motion/')) return 'vendor-framer';
-          if (id.includes('/lucide-react/')) return 'vendor-lucide';
-          return 'vendor-misc';
+          const normalized = id.replace(/\\/g, '/');
+          if (normalized.includes('/react-dom/') || normalized.includes('/react/')) return 'vendor-react';
+          if (normalized.includes('/react-router') || normalized.includes('/react-router-dom')) return 'vendor-router';
+          if (normalized.includes('/xlsx/')) return 'vendor-xlsx';
+          if (normalized.includes('/recharts/') || normalized.includes('/d3-')) return 'vendor-charts';
+          if (normalized.includes('/framer-motion/')) return 'vendor-motion';
+          if (normalized.includes('/lucide-react/')) return 'vendor-icons';
         },
       },
     },

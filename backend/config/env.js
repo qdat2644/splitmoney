@@ -32,6 +32,12 @@ export function loadEnv() {
     nodeEnv,
     port: readPort(process.env.PORT),
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    clientUrl: process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    emailFrom: process.env.EMAIL_FROM || '"Zyra" <no-reply@zyra.app>',
+    sentryDsn: process.env.SENTRY_DSN || '',
+    sentryEnvironment: process.env.SENTRY_ENVIRONMENT || nodeEnv,
+    sentryRelease: process.env.SENTRY_RELEASE || '',
     corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
       .split(',')
       .map((value) => value.trim())

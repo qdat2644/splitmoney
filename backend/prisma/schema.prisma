@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 // ── Core Models ───────────────────────────────────────────────────────────────
@@ -46,6 +46,7 @@ model OperationalEvent {
   metadata  String?
   createdAt DateTime @default(now())
 
+  @@index([createdAt])
   @@index([source, createdAt])
   @@index([type, createdAt])
   @@index([roomId, createdAt])
@@ -107,6 +108,10 @@ model Expense {
   paidByGuest   GuestMember? @relation("ExpenseGuestPayer", fields: [paidByGuestMemberId], references: [id])
   createdByUser User         @relation("ExpenseCreator", fields: [createdByUserId], references: [id])
   participants  ExpenseParticipant[]
+
+  @@index([roomId, date])
+  @@index([createdByUserId])
+  @@index([paidByUserId])
 }
 
 model ExpenseParticipant {
@@ -176,6 +181,11 @@ model Payment {
   toUser        User?        @relation("PaymentToUser", fields: [toUserId], references: [id])
   toGuest       GuestMember? @relation("PaymentToGuest", fields: [toGuestMemberId], references: [id])
   createdByUser User         @relation("PaymentCreator", fields: [createdByUserId], references: [id])
+
+  @@index([roomId, paidAt])
+  @@index([createdByUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
 }
 
 // ── Planning Foundation ───────────────────────────────────────────────────────
@@ -252,6 +262,8 @@ model Budget {
   // Note: Uniqueness is enforced at the application level via findFirst + update/create
   // instead of @@unique, because nullable fields in compound unique constraints cause
   // Prisma client-side validation issues.
+  @@index([userId, month, year])
+  @@index([roomId, month, year])
 }
 
 // 🧠 AI Intelligence 🧠

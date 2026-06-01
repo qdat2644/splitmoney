@@ -5,6 +5,7 @@ import {
   buildSecurityVisibility,
   inspectAdminRoom,
   inspectAdminUser,
+  clearAdminOverviewCache,
 } from '../services/adminOperationsService.js';
 import {
   suspendUser,
@@ -116,7 +117,9 @@ export const postSuspendUser = async (req, res) => {
   try {
     const { userId, reason } = req.body;
     if (!userId) return res.status(400).json({ error: 'Thiếu userId.' });
-    res.json(await suspendUser(req.admin.userId, userId, reason));
+    const result = await suspendUser(req.admin.userId, userId, reason);
+    clearAdminOverviewCache();
+    res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Thao tác thất bại.' });
   }
@@ -126,7 +129,9 @@ export const postReactivateUser = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'Thiếu userId.' });
-    res.json(await reactivateUser(req.admin.userId, userId));
+    const result = await reactivateUser(req.admin.userId, userId);
+    clearAdminOverviewCache();
+    res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Thao tác thất bại.' });
   }
@@ -136,7 +141,9 @@ export const postAssignRole = async (req, res) => {
   try {
     const { userId, role } = req.body;
     if (!userId || !role) return res.status(400).json({ error: 'Thiếu userId hoặc role.' });
-    res.json(await assignUserRole(req.admin.userId, userId, role));
+    const result = await assignUserRole(req.admin.userId, userId, role);
+    clearAdminOverviewCache();
+    res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Thao tác thất bại.' });
   }
@@ -146,7 +153,9 @@ export const postArchiveRoom = async (req, res) => {
   try {
     const { roomId } = req.body;
     if (!roomId) return res.status(400).json({ error: 'Thiếu roomId.' });
-    res.json(await archiveRoom(req.admin.userId, roomId));
+    const result = await archiveRoom(req.admin.userId, roomId);
+    clearAdminOverviewCache();
+    res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Thao tác thất bại.' });
   }
@@ -156,7 +165,9 @@ export const postReopenRoom = async (req, res) => {
   try {
     const { roomId } = req.body;
     if (!roomId) return res.status(400).json({ error: 'Thiếu roomId.' });
-    res.json(await reopenRoom(req.admin.userId, roomId));
+    const result = await reopenRoom(req.admin.userId, roomId);
+    clearAdminOverviewCache();
+    res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Thao tác thất bại.' });
   }
@@ -166,7 +177,9 @@ export const postRecomputeAiProfile = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'Thiếu userId.' });
-    res.json(await recomputeAiProfile(req.admin.userId, userId));
+    const result = await recomputeAiProfile(req.admin.userId, userId);
+    clearAdminOverviewCache();
+    res.json(result);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Thao tác thất bại.' });
   }

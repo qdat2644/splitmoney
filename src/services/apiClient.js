@@ -1,4 +1,7 @@
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const FRIENDLY_NETWORK_ERROR = 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.';
+const FRIENDLY_SERVER_ERROR = 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
+const FRIENDLY_REQUEST_ERROR = 'Yêu cầu không thành công.';
 
 export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
   const token = localStorage.getItem('spliteasy_token');
@@ -20,13 +23,18 @@ export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
 
   if (body) config.body = isFormData ? body : JSON.stringify(body);
 
-  const response = await fetch(`${API_URL}${endpoint}`, config);
+  let response;
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, config);
+  } catch {
+    throw new Error(FRIENDLY_NETWORK_ERROR);
+  }
   
   let data;
   try {
     data = await response.json();
-  } catch (err) {
-    throw new Error(`Lỗi kết nối tới máy chủ (${response.status})`);
+  } catch {
+    throw new Error(response.status >= 500 ? FRIENDLY_SERVER_ERROR : FRIENDLY_REQUEST_ERROR);
   }
 
   if (!response.ok) {
@@ -37,8 +45,8 @@ export const apiClient = async (endpoint, { body, ...customConfig } = {}) => {
     const errorString =
       (typeof data?.error === 'string' && data.error.length > 0 ? data.error : null) ||
       (typeof data?.message === 'string' && data.message.length > 0 ? data.message : null) ||
-      'Yêu cầu không thành công.';
-    throw new Error(errorString);
+      FRIENDLY_REQUEST_ERROR;
+    throw new Error(response.status >= 500 ? FRIENDLY_SERVER_ERROR : errorString);
   }
 
   return data;
@@ -89,6 +97,10 @@ export const userApi = {
   getInsights: () => apiClient('/users/me/insights'),
   getAnalytics: () => apiClient('/users/me/analytics'),
   getCopilot: () => apiClient('/users/me/copilot'),
+  getDashboard: () => apiClient('/users/me/dashboard'),
+  getForecasts: () => apiClient('/users/me/forecasts'),
+  updateProfile: (data) => apiClient('/users/me/profile', { method: 'PATCH', body: data }),
+  changePassword: (data) => apiClient('/users/me/change-password', { body: data }),
 };
 
 export const paymentApi = {

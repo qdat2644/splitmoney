@@ -7,6 +7,10 @@ import { sendPasswordResetEmail } from '../utils/email.js';
 import { recordOperationalEvent } from '../services/operationalEventService.js';
 import { logger } from '../utils/logger.js';
 
+const PASSWORD_RESET_GENERIC_MESSAGE = 'Neu email ton tai, lien ket dat lai mat khau da duoc gui.';
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const MIN_RESET_PASSWORD_LENGTH = 8;
+
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -94,18 +98,33 @@ export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' });
+    if (!user) return res.json({ message: PASSWORD_RESET_GENERIC_MESSAGE });
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS);
 
     await prisma.passwordResetToken.create({
       data: { userId: user.id, tokenHash, expiresAt },
     });
 
-    await sendPasswordResetEmail(email, resetToken);
-    return res.json({ message: 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.' });
+    try {
+      await sendPasswordResetEmail(user.email, resetToken);
+    } catch (error) {
+      logger.warn('auth_password_reset_email_delivery_failed', {
+        userId: user.id,
+        emailDomain: emailDomain(user.email),
+        message: error.message,
+      });
+      recordOperationalEvent({
+        type: 'auth.password_reset_delivery_failed',
+        source: 'auth',
+        severity: 'warning',
+        userId: user.id,
+        metadata: { emailDomain: emailDomain(user.email), provider: 'resend' },
+      }).catch(() => {});
+    }
+    return res.json({ message: PASSWORD_RESET_GENERIC_MESSAGE });
   } catch (error) {
     logger.error('auth_forgot_password_failed', {
       message: error.message,
@@ -119,6 +138,9 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+    if (newPassword && newPassword.length < MIN_RESET_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: 'Mat khau moi can it nhat 8 ky tu.' });
+    }
     if (!token || !newPassword) return res.status(400).json({ error: 'Thiếu mã đặt lại hoặc mật khẩu mới.' });
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');

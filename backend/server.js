@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import prisma from './utils/db.js';
 import { logger } from './utils/logger.js';
+import { captureUnhandledError } from './monitoring/sentry.js';
 
 const app = createApp();
 const server = app.listen(env.port, () => {
@@ -26,7 +27,9 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('unhandledRejection', (reason) => {
   logger.error('unhandled_rejection', { message: reason?.message || String(reason) });
+  captureUnhandledError(reason, 'unhandled_rejection');
 });
 process.on('uncaughtException', (error) => {
   logger.error('uncaught_exception', { message: error.message, stack: env.nodeEnv === 'development' ? error.stack : undefined });
+  captureUnhandledError(error, 'uncaught_exception');
 });

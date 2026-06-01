@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
+import { captureServerError } from '../monitoring/sentry.js';
 
 export function notFoundHandler(req, res) {
   res.status(404).json({ error: true, message: 'Không tìm thấy nội dung.', code: 'NOT_FOUND' });
@@ -16,6 +17,10 @@ export function errorHandler(err, req, res, next) {
 
   const status = err.status || 500;
   const isServerError = status >= 500;
+  if (isServerError) {
+    captureServerError(err, req, { status });
+  }
+
   res.status(status).json({
     error: true,
     message: env.nodeEnv === 'production' && isServerError ? 'Internal server error' : (err.message || 'Internal server error'),

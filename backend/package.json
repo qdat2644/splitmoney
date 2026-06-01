@@ -5,11 +5,16 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:sqlite": "vitest run",
+    "prisma:validate": "prisma validate",
+    "migration:export:dry-run": "node scripts/export-sqlite-data.js",
+    "migration:check": "node scripts/check-data-integrity.js"
   },
   "dependencies": {
     "@google/genai": "^2.2.0",
     "@prisma/client": "5.22.0",
+    "@sentry/node": "^10.55.0",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
@@ -19,7 +24,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.7",
+    "resend": "^6.12.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

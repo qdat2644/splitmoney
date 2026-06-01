@@ -2,8 +2,29 @@ import prisma from '../utils/db.js';
 import { listOperationalEvents } from './operationalEventService.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ADMIN_OVERVIEW_TTL_MS = 2 * 60 * 1000;
+let adminOverviewCache = null;
 
 export async function buildAdminOverview(db = prisma) {
+  const cacheKey = db === prisma ? 'default' : 'custom';
+  if (adminOverviewCache?.key === cacheKey && adminOverviewCache.expiresAt > Date.now()) {
+    return adminOverviewCache.value;
+  }
+
+  const value = await buildAdminOverviewUncached(db);
+  adminOverviewCache = {
+    key: cacheKey,
+    value,
+    expiresAt: Date.now() + ADMIN_OVERVIEW_TTL_MS,
+  };
+  return value;
+}
+
+export function clearAdminOverviewCache() {
+  adminOverviewCache = null;
+}
+
+async function buildAdminOverviewUncached(db = prisma) {
   const now = new Date();
   const today = startOfDay(now);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);

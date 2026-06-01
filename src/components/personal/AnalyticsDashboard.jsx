@@ -34,8 +34,21 @@ function TrendTooltip({ active, payload, label }) {
   );
 }
 
-export default function AnalyticsDashboard() {
-  const { data, loading, error, refetch } = useDashboardAnalytics();
+/**
+ * AnalyticsDashboard — renders analytics data with charts, metrics, recurring candidates, and anomalies.
+ *
+ * @param {object} [props.data] — Optional pre-fetched analytics payload from useDashboard().
+ *   When provided (PersonalDashboard path), the internal useDashboardAnalytics() hook is
+ *   still called (hooks must be called unconditionally) but its result is ignored.
+ *   When omitted (standalone path: ForecastsPage, etc.), useDashboardAnalytics() drives the state.
+ */
+export default function AnalyticsDashboard({ data: propData } = {}) {
+  const { data: hookData, loading: hookLoading, error: hookError, refetch } = useDashboardAnalytics();
+
+  // If a data prop was supplied (consolidated dashboard path), use it directly.
+  const data    = propData !== undefined ? propData : hookData;
+  const loading = propData !== undefined ? false    : hookLoading;
+  const error   = propData !== undefined ? null     : hookError;
 
   if (loading) {
     return (

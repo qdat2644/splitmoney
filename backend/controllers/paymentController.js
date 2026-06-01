@@ -1,7 +1,7 @@
 // paymentController.js — HTTP handlers for payment ledger
 import prisma from '../utils/db.js';
 import { listPayments, createPayment, deletePayment } from '../services/paymentService.js';
-import { invalidateProfileCache } from '../services/intelligence/personalFinanceProfileService.js';
+import { invalidateUserFinanceCaches } from '../services/financeCacheInvalidationService.js';
 
 export const getPayments = async (req, res) => {
   try {
@@ -18,8 +18,7 @@ export const addPayment = async (req, res) => {
     const { roomId } = req.params;
     const createdByUserId = req.user.userId;
     const payment = await createPayment(roomId, req.body, createdByUserId);
-    if (payment.fromUserId) invalidateProfileCache(payment.fromUserId).catch(() => {});
-    if (payment.toUserId) invalidateProfileCache(payment.toUserId).catch(() => {});
+    invalidateUserFinanceCaches([payment.fromUserId, payment.toUserId, createdByUserId]);
     res.status(201).json({ payment });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -40,8 +39,7 @@ export const removePayment = async (req, res) => {
     const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
     const result = await deletePayment(paymentId, roomId, requesterId, requesterRole);
     if (payment) {
-      if (payment.fromUserId) invalidateProfileCache(payment.fromUserId).catch(() => {});
-      if (payment.toUserId) invalidateProfileCache(payment.toUserId).catch(() => {});
+      invalidateUserFinanceCaches([payment.fromUserId, payment.toUserId, requesterId]);
     }
     res.json(result);
   } catch (err) {

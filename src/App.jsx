@@ -22,6 +22,7 @@ const AICopilotPage = lazy(() => import('./pages/AICopilotPage'));
 const ForecastsPage = lazy(() => import('./pages/ForecastsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AdminWorkspace = lazy(() => import('./pages/admin/AdminWorkspace'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 
 function PageFallback() {
   return (
@@ -129,7 +130,14 @@ function AppContent() {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-  if (!user) return <AuthScreen />;
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/reset-password" element={<Suspense fallback={<PageFallback />}><ResetPassword /></Suspense>} />
+        <Route path="*" element={<AuthScreen />} />
+      </Routes>
+    );
+  }
 
   return (
     <Routes>

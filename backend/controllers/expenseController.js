@@ -1,6 +1,6 @@
 // expenseController.js - Handles expense CRUD with unified split type support
 import prisma from '../utils/db.js';
-import { invalidateProfileCache } from '../services/intelligence/personalFinanceProfileService.js';
+import { invalidateRoomFinanceCaches } from '../services/financeCacheInvalidationService.js';
 import {
   buildParticipantRows,
   createExpenseForRoom,
@@ -98,10 +98,7 @@ export const updateExpense = async (req, res) => {
       include: { participants: true },
     });
 
-    if (paidByUserId) invalidateProfileCache(paidByUserId).catch(() => {});
-    participants.forEach((participant) => {
-      if (participant.userId) invalidateProfileCache(participant.userId).catch(() => {});
-    });
+    invalidateRoomFinanceCaches(roomId).catch(() => {});
 
     res.json({ expense });
   } catch (error) {
@@ -119,10 +116,7 @@ export const deleteExpense = async (req, res) => {
     if (!expense || expense.roomId !== roomId) return res.status(404).json({ error: 'Không tìm thấy khoản chi.' });
 
     await prisma.expense.delete({ where: { id: expenseId } });
-    if (expense.paidByUserId) invalidateProfileCache(expense.paidByUserId).catch(() => {});
-    expense.participants.forEach((participant) => {
-      if (participant.userId) invalidateProfileCache(participant.userId).catch(() => {});
-    });
+    invalidateRoomFinanceCaches(roomId).catch(() => {});
 
     res.json({ success: true });
   } catch (error) {

@@ -1,5 +1,6 @@
 import prisma from '../../utils/db.js';
 import { createExpenseForRoom } from '../expenseWriteService.js';
+import { invalidateRoomFinanceCaches } from '../financeCacheInvalidationService.js';
 import { getImportSession, markImportSessionCommitted, markImportSessionCommitting } from './importPreviewService.js';
 
 export async function commitImport({ importId, roomId, userId, memberMappings = {}, selectedRows = [] }, db = prisma) {
@@ -66,6 +67,7 @@ export async function commitImport({ importId, roomId, userId, memberMappings = 
         paidByGuestMemberId: payer.guestMemberId,
         date: row.date || new Date(),
         participants,
+        invalidateCaches: false,
       }, db);
 
       createdExpenses += 1;
@@ -77,6 +79,7 @@ export async function commitImport({ importId, roomId, userId, memberMappings = 
   }
 
   markImportSessionCommitted(importId);
+  if (createdExpenses > 0) invalidateRoomFinanceCaches(roomId, db).catch(() => {});
   return {
     createdExpenses,
     createdGuests: createdGuestBySource.size,

@@ -21,8 +21,21 @@ function InsightSkeleton() {
   );
 }
 
-export default function InsightsSection() {
-  const { data, loading, error, refetch } = useDashboardInsights();
+/**
+ * InsightsSection — renders AI-generated (or rule-based) personal finance insights.
+ *
+ * @param {object} [props.data] — Optional pre-fetched insights payload from useDashboard().
+ *   When provided (PersonalDashboard path), useDashboardInsights() is still called
+ *   (hooks must be called unconditionally) but its result is ignored.
+ *   When omitted (standalone rendering), useDashboardInsights() drives the state.
+ */
+export default function InsightsSection({ data: propData } = {}) {
+  const { data: hookData, loading: hookLoading, error: hookError, refetch } = useDashboardInsights();
+
+  // If a data prop was supplied (consolidated dashboard path), use it directly.
+  const data    = propData !== undefined ? propData : hookData;
+  const loading = propData !== undefined ? false    : hookLoading;
+  const error   = propData !== undefined ? null     : hookError;
 
   return (
     <motion.div

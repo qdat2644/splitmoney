@@ -11,6 +11,8 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 5000,
+      SENTRY_ENVIRONMENT: 'production',
+      SENTRY_RELEASE: '',
     },
   }],
 };

@@ -18,6 +18,7 @@ import importRoutes from './routes/importRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { env } from './config/env.js';
+import { initSentry } from './monitoring/sentry.js';
 import { corsOptions } from './config/cors.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -26,6 +27,8 @@ import { aiLimiter, authLimiter, generalLimiter } from './middleware/rateLimiter
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distPath = path.join(__dirname, '../dist');
+
+initSentry();
 
 export function createApp() {
   const app = express();
@@ -44,6 +47,7 @@ export function createApp() {
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
       environment: env.nodeEnv,
+      release: env.sentryRelease || null,
     });
   });
 

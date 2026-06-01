@@ -1,6 +1,6 @@
 import prisma from '../utils/db.js';
 import { resolveShares } from '../utils/settlement.js';
-import { invalidateProfileCache } from './intelligence/personalFinanceProfileService.js';
+import { invalidateUserFinanceCaches } from './financeCacheInvalidationService.js';
 
 export async function getRoomIdentities(roomId, db = prisma) {
   const [roomMembers, guestMembers] = await Promise.all([
@@ -43,6 +43,7 @@ export async function createExpenseForRoom({
   paidByGuestMemberId,
   date,
   participants,
+  invalidateCaches = true,
 }, db = prisma) {
   if (!title?.trim()) throw httpError('Vui lòng nhập tên khoản chi.', 400);
   if (!paidByUserId && !paidByGuestMemberId) throw httpError('Vui lòng chọn người trả.', 400);
@@ -75,10 +76,7 @@ export async function createExpenseForRoom({
     include: { participants: true },
   });
 
-  if (paidByUserId) invalidateProfileCache(paidByUserId).catch(() => {});
-  participants.forEach((participant) => {
-    if (participant.userId) invalidateProfileCache(participant.userId).catch(() => {});
-  });
+  if (invalidateCaches) invalidateUserFinanceCaches([...validUserIds]);
 
   return expense;
 }

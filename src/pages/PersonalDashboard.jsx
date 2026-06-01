@@ -1,4 +1,5 @@
 // PersonalDashboard.jsx - Standalone personal finance overview
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useDashboardSummary } from '../hooks/useDashboardSummary';
+import { useDashboard } from '../hooks/useDashboard';
 import { useBudgets } from '../hooks/useBudgets';
 import { useCopilotWorkspace } from '../hooks/useCopilotWorkspace';
 import { formatCurrency } from '../utils/formatters';
@@ -61,18 +62,37 @@ const memoryLabels = {
 export default function PersonalDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { data, loading, error, refetch } = useDashboardSummary();
+
+  // Single consolidated request: replaces useDashboardSummary + useDashboardAnalytics + useDashboardInsights.
+  // One HTTP round-trip, one snapshot computation on the server.
+  const { data: dashboardData, loading, error, refetch } = useDashboard();
+
+  // Slice the consolidated payload into named sections used by each sub-component.
+  const data     = dashboardData?.summary   ?? null;   // shape identical to old /me/summary
+  const analytics = dashboardData?.analytics ?? null;  // shape identical to old /me/analytics
+  const insights  = dashboardData?.insights  ?? null;  // shape identical to old /me/insights
+
   const { status: budgetStatus } = useBudgets();
   const { data: copilotData } = useCopilotWorkspace();
 
-  const uniqueRecommendations = dedupeRecommendations(copilotData?.recommendations ?? []);
-  const topPriorities = [...uniqueRecommendations]
-    .sort(compareRecommendationPriority)
-    .slice(0, 4);
-  const topOpportunities = excludeSimilarRecommendations(
-    dedupeRecommendations(copilotData?.opportunities ?? []),
-    topPriorities
-  ).slice(0, 2);
+  // Memoize derived recommendation arrays — these are pure transforms of copilotData
+  // and should not recompute on every render tick caused by unrelated state changes.
+  const uniqueRecommendations = useMemo(
+    () => dedupeRecommendations(copilotData?.recommendations ?? []),
+    [copilotData?.recommendations],
+  );
+  const topPriorities = useMemo(
+    () => [...uniqueRecommendations].sort(compareRecommendationPriority).slice(0, 4),
+    [uniqueRecommendations],
+  );
+  const topOpportunities = useMemo(
+    () => excludeSimilarRecommendations(
+      dedupeRecommendations(copilotData?.opportunities ?? []),
+      topPriorities,
+    ).slice(0, 2),
+    [copilotData?.opportunities, topPriorities],
+  );
+
   const narrative = buildPersonalNarrative({ data, copilotData, budgetStatus });
 
   const greeting = () => {
@@ -225,14 +245,16 @@ export default function PersonalDashboard() {
                       description="Độ sâu cho những lúc bạn cần kiểm tra kỹ hơn."
                     />
                     <BudgetStatusCard status={budgetStatus} />
-                    <AnalyticsDashboard />
+                    {/* Pass the pre-fetched analytics slice — AnalyticsDashboard skips its own fetch */}
+                    <AnalyticsDashboard data={analytics} />
                   </section>
                 </div>
 
                 <aside className="space-y-4">
                   <ForecastSnapshot data={copilotData} />
                   <FinancialMemory data={copilotData} />
-                  <InsightsSection />
+                  {/* Pass the pre-fetched insights slice — InsightsSection skips its own fetch */}
+                  <InsightsSection data={insights} />
                   <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
                     <div className="flex items-center gap-2">
                       <PiggyBank className="h-4 w-4 text-emerald-400" />
