@@ -1,6 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const MODELS = [
   ['users', 'user'],
@@ -24,7 +27,9 @@ const args = parseArgs(process.argv.slice(2));
 if (args.databaseUrl) process.env.DATABASE_URL = args.databaseUrl;
 
 const { PrismaClient } = await import('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = new PrismaClient(
+  process.env.DATABASE_URL ? { datasources: { db: { url: process.env.DATABASE_URL } } } : undefined,
+);
 
 try {
   const exportedAt = new Date().toISOString();

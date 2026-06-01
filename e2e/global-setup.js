@@ -77,7 +77,7 @@ export default async function globalSetup() {
 
   const { PrismaClient } = await loadBackendModule('@prisma/client/index.js');
   const bcrypt = await loadBackendModule('bcryptjs/index.js');
-  const prisma = new PrismaClient();
+  const prisma = new PrismaClient({ datasources: { db: { url: env.DATABASE_URL } } });
 
   try {
     await resetDatabase(prisma);

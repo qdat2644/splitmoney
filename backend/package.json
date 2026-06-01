@@ -9,6 +9,7 @@
     "test:sqlite": "node scripts/run-vitest-safe.js",
     "db:guard": "node scripts/db-guard.js",
     "db:backup": "node scripts/backup-dev-db.js",
+    "db:diagnose": "node scripts/db-diagnostics.js",
     "prisma:validate": "prisma validate",
     "migration:export:dry-run": "node scripts/export-sqlite-data.js",
     "migration:check": "node scripts/check-data-integrity.js"
