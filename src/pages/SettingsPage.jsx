@@ -85,7 +85,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6">
+    <main data-testid="settings-page" className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         eyebrow="Tài khoản"
         title="Cài đặt"
@@ -128,6 +128,7 @@ function ProfileSection({ email, name, error, saving, onNameChange, onSubmit }) 
       <form onSubmit={onSubmit} className="mt-5 space-y-4">
         <AppInput
           label="Tên hiển thị"
+          data-testid="settings-name-input"
           value={name}
           onChange={(event) => onNameChange(event.target.value)}
           error={error}
@@ -142,7 +143,7 @@ function ProfileSection({ email, name, error, saving, onNameChange, onSubmit }) 
           helperText="Email đang ở chế độ chỉ đọc vì Zyra chưa có luồng đổi email an toàn."
           className="cursor-not-allowed opacity-80"
         />
-        <AppButton type="submit" icon={Save} loading={saving}>
+        <AppButton data-testid="settings-save-profile" type="submit" icon={Save} loading={saving}>
           Lưu hồ sơ
         </AppButton>
       </form>
@@ -184,9 +185,9 @@ function SecuritySection({ passwords, error, saving, onChange, onSubmit }) {
           icon={Lock}
           autoComplete="new-password"
         />
-        {error && <p className="text-xs text-red-300 md:col-span-3">{error}</p>}
+        {error && <p data-testid="settings-password-error" className="text-xs text-red-300 md:col-span-3">{error}</p>}
         <div className="md:col-span-3">
-          <AppButton type="submit" icon={Lock} loading={saving}>
+          <AppButton data-testid="settings-password-submit" type="submit" icon={Lock} loading={saving}>
             Cập nhật mật khẩu
           </AppButton>
         </div>
@@ -197,7 +198,7 @@ function SecuritySection({ passwords, error, saving, onChange, onSubmit }) {
 
 function DataSection() {
   return (
-    <AppCard className="border border-white/5 bg-dark-800 p-5">
+    <AppCard data-testid="settings-export-section" className="border border-white/5 bg-dark-800 p-5">
       <SectionHeader
         icon={Download}
         title="Dữ liệu tài khoản"

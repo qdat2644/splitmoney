@@ -6,7 +6,9 @@ dotenv.config();
 
 let ai = null;
 try {
-  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  if (process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.startsWith('disabled-')) {
+    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
 } catch (error) {
   logger.warn('ai_insight_init_failed', { message: error.message });
 }

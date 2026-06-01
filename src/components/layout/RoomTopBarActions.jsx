@@ -57,6 +57,7 @@ export default function RoomTopBarActions({ onAddExpense }) {
       )}
 
       <motion.button
+        data-testid="room-add-expense"
         whileTap={{ scale: 0.98 }}
         onClick={onAddExpense}
         className="btn-primary h-8 px-3 text-xs flex items-center gap-1.5 font-medium"

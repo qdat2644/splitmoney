@@ -91,7 +91,7 @@ export default function RoomList() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div data-testid="rooms-page" className="max-w-6xl mx-auto space-y-6">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white">Phòng của bạn</h1>
           <p className="text-gray-400">Chào, {user?.name}</p>
@@ -103,9 +103,10 @@ export default function RoomList() {
             <form onSubmit={handleCreate} className="space-y-3">
               <input 
                 className="input-field" placeholder="Tên phòng..." 
+                data-testid="room-name-input"
                 value={name} onChange={e => setName(e.target.value)}
               />
-              <button disabled={loading} type="submit" className="btn-primary w-full flex justify-center gap-2">
+              <button data-testid="room-create-submit" disabled={loading} type="submit" className="btn-primary w-full flex justify-center gap-2">
                 <Plus className="w-4 h-4" /> Tạo ngay
               </button>
             </form>
@@ -166,6 +167,7 @@ export default function RoomList() {
             {rooms.map(membership => (
               <div 
                 key={membership.id} 
+                data-testid="room-card"
                 className={`card p-4 flex items-center justify-between transition-colors
                   ${membership.status === 'approved' ? 'hover:bg-white/5 cursor-pointer border-blue-500/30' : 'opacity-75 border-white/5'}
                 `}

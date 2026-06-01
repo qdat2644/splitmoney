@@ -73,7 +73,7 @@ export default function AdminWorkspace() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-5">
+    <main data-testid="admin-workspace" className="mx-auto max-w-6xl space-y-5">
       {/* Title row */}
       <PageHeader
         eyebrow="Zyra / Admin operations"
@@ -99,6 +99,7 @@ export default function AdminWorkspace() {
             return (
               <button
                 key={tab.key}
+                data-testid={`admin-tab-${tab.key || 'overview'}`}
                 onClick={() => navigate(tab.path)}
                 className={`
                   h-full whitespace-nowrap rounded-md px-3 text-xs font-medium transition-colors

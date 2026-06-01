@@ -67,7 +67,7 @@ export default function ForecastsPage() {
   const isSparse = data?.meta?.dataQuality === 'sparse';
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6">
+    <main data-testid="forecasts-page" className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         eyebrow="Dự báo"
         title="Dự báo tháng này"

@@ -9,3 +9,5 @@ backend/dist/
 
 backend/prisma/dev.db
 backend/prisma/*.db
+playwright-report/
+test-results/

@@ -163,7 +163,7 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
 
   return (
     <>
-      <aside className="hidden h-screen w-56 shrink-0 lg:flex lg:flex-col">
+      <aside data-testid="app-sidebar" className="hidden h-screen w-56 shrink-0 lg:flex lg:flex-col">
         {content}
       </aside>
       <div className={`lg:hidden ${mobileOpen ? '' : 'pointer-events-none'}`}>

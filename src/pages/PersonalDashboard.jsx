@@ -103,7 +103,7 @@ export default function PersonalDashboard() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6">
+    <main data-testid="personal-dashboard" className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         eyebrow={`${greeting()},`}
         title={user?.name}

@@ -17,7 +17,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark-900 p-4">
+    <div data-testid="auth-screen" className="min-h-screen flex items-center justify-center bg-dark-900 p-4">
       {isLogin ? (
         <Login onSwitch={() => setIsLogin(false)} />
       ) : (

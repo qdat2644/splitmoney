@@ -200,7 +200,7 @@ export default function AddExpenseModal({ open, onClose, editData = null }) {
   return (
     <ModalLayout open={open} onClose={onClose} size="md">
       <ModalHeader title={editData ? 'Chỉnh sửa khoản chi' : 'Thêm khoản chi mới'} onClose={onClose} />
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+      <form data-testid="expense-form" onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
         <ModalBody className="space-y-5">
           {/* AI Input Area */}
         {!editData && (
@@ -273,6 +273,7 @@ export default function AddExpenseModal({ open, onClose, editData = null }) {
           label="Tên khoản chi"
           required
           placeholder="VD: Ăn lẩu, Xăng xe..."
+          data-testid="expense-title-input"
           value={form.title}
           onChange={(e) => set('title', e.target.value)}
           error={errors.title}
@@ -286,6 +287,7 @@ export default function AddExpenseModal({ open, onClose, editData = null }) {
             type="number"
             min="0"
             placeholder="VD: 300000"
+            data-testid="expense-amount-input"
             value={form.amount}
             onChange={(e) => set('amount', e.target.value)}
             error={errors.amount}
@@ -426,6 +428,7 @@ export default function AddExpenseModal({ open, onClose, editData = null }) {
             Huỷ
           </AppButton>
           <AppButton 
+            data-testid="expense-submit"
             type="submit" 
             loading={isSubmitting}
             variant={duplicateWarning ? 'danger' : 'primary'} 
