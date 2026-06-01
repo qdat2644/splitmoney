@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import fs from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { assertE2EDatabaseUrl, assertSafeDatabaseUrl } from '../backend/utils/databaseSafety.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -53,6 +53,13 @@ async function loadBackendModule(packagePath) {
 }
 
 export default async function globalSetup() {
+  assertE2EDatabaseUrl(env.DATABASE_URL);
+  assertSafeDatabaseUrl({
+    nodeEnv: env.NODE_ENV,
+    databaseUrl: env.DATABASE_URL,
+    context: 'Playwright global setup',
+  });
+
   const command = process.platform === 'win32'
     ? (process.env.ComSpec || 'cmd.exe')
     : path.join(backendDir, 'node_modules', '.bin', 'prisma');
@@ -60,21 +67,11 @@ export default async function globalSetup() {
     ? ['/d', '/s', '/c', 'npx prisma db push --skip-generate']
     : ['db', 'push', '--skip-generate'];
 
-  try {
-    execFileSync(command, args, {
-      cwd: backendDir,
-      env,
-      stdio: 'inherit',
-    });
-  } catch (error) {
-    const templateDb = path.join(backendDir, 'prisma', 'dev.db');
-    const e2eDb = path.join(backendDir, 'prisma', 'e2e.db');
-    if (!fs.existsSync(templateDb)) {
-      throw error;
-    }
-    fs.copyFileSync(templateDb, e2eDb);
-    console.warn('Prisma db push failed; copied backend/prisma/dev.db schema into isolated e2e.db instead.');
-  }
+  execFileSync(command, args, {
+    cwd: backendDir,
+    env,
+    stdio: 'inherit',
+  });
 
   process.env.DATABASE_URL = env.DATABASE_URL;
 

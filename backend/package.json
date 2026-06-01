@@ -5,8 +5,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "vitest run",
-    "test:sqlite": "vitest run",
+    "test": "node scripts/run-vitest-safe.js",
+    "test:sqlite": "node scripts/run-vitest-safe.js",
+    "db:guard": "node scripts/db-guard.js",
+    "db:backup": "node scripts/backup-dev-db.js",
     "prisma:validate": "prisma validate",
     "migration:export:dry-run": "node scripts/export-sqlite-data.js",
     "migration:check": "node scripts/check-data-integrity.js"
