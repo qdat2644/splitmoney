@@ -95,21 +95,26 @@ function AdminGuard({ children }) {
   return user?.role === 'admin' ? children : <Navigate to="/" replace />;
 }
 
-function RoomRoutes() {
-  const { loadingRoom, currentRoom } = useApp();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [expenseModal, setExpenseModal] = useState({ open: false, editData: null });
+function getRoomIdFromPath(pathname) {
+  return pathname.match(/^\/rooms\/([^/]+)/)?.[1] ?? null;
+}
 
-  const openAdd = () => setExpenseModal({ open: true, editData: null });
-  const openEdit = (expense) => setExpenseModal({ open: true, editData: expense });
-  const closeModal = () => setExpenseModal({ open: false, editData: null });
+function getTopBarTitle(pathname, currentRoom, roomShellActive) {
+  if (roomShellActive) return currentRoom?.room?.name || 'Phòng';
+  if (pathname === '/' || pathname === '') return 'Tổng quan';
+  if (pathname.startsWith('/analytics') || pathname.startsWith('/insights')) return 'Phân tích';
+  if (pathname.startsWith('/rooms')) return 'Phòng';
+  if (pathname.startsWith('/plans')) return 'Kế hoạch';
+  if (pathname.startsWith('/budget')) return 'Ngân sách';
+  if (pathname.startsWith('/copilot')) return 'Trợ lý AI';
+  if (pathname.startsWith('/forecasts')) return 'Dự báo';
+  if (pathname.startsWith('/settings')) return 'Cài đặt';
+  if (pathname.startsWith('/admin')) return 'Quản trị';
+  return 'Tổng quan';
+}
 
-  useEffect(() => {
-    if (loadingRoom || !currentRoom || !location.state?.openAddExpense) return;
-    setExpenseModal({ open: true, editData: null });
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [currentRoom, loadingRoom, location.pathname, location.state, navigate]);
+function RoomRoutes({ onAddExpense, onEditExpense }) {
+  const { loadingRoom } = useApp();
 
   if (loadingRoom) {
     return (
@@ -120,17 +125,76 @@ function RoomRoutes() {
   }
 
   return (
-    <AppShell mode="room" topBarTitle={currentRoom?.room?.name} topBarActions={<RoomTopBarActions onAddExpense={openAdd} />}>
+    <Routes>
+      <Route path="dashboard" element={<Dashboard onAddExpense={onAddExpense} onEditExpense={onEditExpense} />} />
+      <Route path="expenses" element={<Expenses onAddExpense={onAddExpense} onEditExpense={onEditExpense} />} />
+      <Route path="members" element={<Members />} />
+      <Route path="settlements" element={<Settlements onAddExpense={onAddExpense} />} />
+      <Route path="analytics" element={<Analytics />} />
+      <Route path="*" element={<Navigate to="dashboard" replace />} />
+    </Routes>
+  );
+}
+
+function AuthenticatedApp() {
+  const { currentRoom, loadingRoom } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [expenseModal, setExpenseModal] = useState({ open: false, editData: null });
+  const roomIdFromPath = getRoomIdFromPath(location.pathname);
+  const roomShellActive = Boolean(
+    roomIdFromPath &&
+    currentRoom?.roomId === roomIdFromPath &&
+    currentRoom?.status !== 'pending'
+  );
+
+  const openAddExpense = () => setExpenseModal({ open: true, editData: null });
+  const openEditExpense = (expense) => setExpenseModal({ open: true, editData: expense });
+  const closeExpenseModal = () => setExpenseModal({ open: false, editData: null });
+
+  useEffect(() => {
+    if (!roomShellActive && expenseModal.open) {
+      closeExpenseModal();
+    }
+  }, [expenseModal.open, roomShellActive]);
+
+  useEffect(() => {
+    if (!roomShellActive || loadingRoom || !location.state?.openAddExpense) return;
+    openAddExpense();
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [loadingRoom, location.pathname, location.state, navigate, roomShellActive]);
+
+  return (
+    <AppShell
+      mode={roomShellActive ? 'room' : 'global'}
+      topBarTitle={getTopBarTitle(location.pathname, currentRoom, roomShellActive)}
+      topBarActions={roomShellActive ? <RoomTopBarActions onAddExpense={openAddExpense} /> : null}
+    >
       <Routes>
-        <Route path="dashboard" element={<Dashboard onAddExpense={openAdd} onEditExpense={openEdit} />} />
-        <Route path="expenses" element={<Expenses onAddExpense={openAdd} onEditExpense={openEdit} />} />
-        <Route path="members" element={<Members />} />
-        <Route path="settlements" element={<Settlements onAddExpense={openAdd} />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="*" element={<Navigate to="dashboard" replace />} />
+        <Route path="/" element={<PersonalDashboard />} />
+        <Route path="/insights" element={<Navigate to="/analytics" replace />} />
+        <Route path="/analytics" element={<Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense>} />
+        <Route path="/rooms" element={<RoomList />} />
+        <Route path="/plans" element={<Suspense fallback={<PageFallback />}><PlansPage /></Suspense>} />
+        <Route path="/budget" element={<Suspense fallback={<PageFallback />}><BudgetPage /></Suspense>} />
+        <Route path="/copilot" element={<Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense>} />
+        <Route path="/forecasts" element={<Suspense fallback={<PageFallback />}><ForecastsPage /></Suspense>} />
+        <Route path="/settings" element={<Suspense fallback={<PageFallback />}><SettingsPage /></Suspense>} />
+        <Route path="/admin/*" element={<AdminGuard><Suspense fallback={<PageFallback />}><AdminWorkspace /></Suspense></AdminGuard>} />
+        <Route
+          path="/rooms/:roomId/*"
+          element={
+            <RoomGuard>
+              <RoomRoutes onAddExpense={openAddExpense} onEditExpense={openEditExpense} />
+            </RoomGuard>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      <AddExpenseModal open={expenseModal.open} onClose={closeModal} editData={expenseModal.editData} />
+      {roomShellActive && (
+        <AddExpenseModal open={expenseModal.open} onClose={closeExpenseModal} editData={expenseModal.editData} />
+      )}
     </AppShell>
   );
 }
@@ -148,22 +212,7 @@ function AppContent() {
     );
   }
 
-  return (
-    <Routes>
-      <Route path="/" element={<AppShell mode="global" topBarTitle="Tổng quan"><PersonalDashboard /></AppShell>} />
-      <Route path="/insights" element={<Navigate to="/analytics" replace />} />
-      <Route path="/analytics" element={<AppShell mode="global" topBarTitle="Phân tích"><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AppShell>} />
-      <Route path="/rooms" element={<AppShell mode="global" topBarTitle="Phòng"><RoomList /></AppShell>} />
-      <Route path="/plans" element={<AppShell mode="global" topBarTitle="Kế hoạch"><Suspense fallback={<PageFallback />}><PlansPage /></Suspense></AppShell>} />
-      <Route path="/budget" element={<AppShell mode="global" topBarTitle="Ngân sách"><Suspense fallback={<PageFallback />}><BudgetPage /></Suspense></AppShell>} />
-      <Route path="/copilot" element={<AppShell mode="global" topBarTitle="Trợ lý AI"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
-      <Route path="/forecasts" element={<AppShell mode="global" topBarTitle="Dự báo"><Suspense fallback={<PageFallback />}><ForecastsPage /></Suspense></AppShell>} />
-      <Route path="/settings" element={<AppShell mode="global" topBarTitle="Cài đặt"><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AppShell>} />
-      <Route path="/admin/*" element={<AdminGuard><AppShell mode="global" topBarTitle="Quản trị"><Suspense fallback={<PageFallback />}><AdminWorkspace /></Suspense></AppShell></AdminGuard>} />
-      <Route path="/rooms/:roomId/*" element={<RoomGuard><RoomRoutes /></RoomGuard>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
+  return <AuthenticatedApp />;
 }
 
 export default function App() {
