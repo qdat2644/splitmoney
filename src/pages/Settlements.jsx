@@ -13,7 +13,7 @@ import PageHeader from '../components/ui/PageHeader';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
 
-export default function Settlements() {
+export default function Settlements({ onAddExpense }) {
   const { settlements, members, stats, payments, deletePayment, toast } = useApp();
   const confirm = useConfirm();
   const [payModal, setPayModal] = useState({ open: false, prefill: null });
@@ -106,9 +106,8 @@ export default function Settlements() {
       >
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
         <p>
-          Thuật toán tối ưu giảm số giao dịch xuống còn <strong>{settlements.length}</strong>.
-          Nhấn <strong>"Trả tiền"</strong> để ghi nhận thanh toán với số tiền bất kỳ — hệ thống sẽ
-          cập nhật số dư ngay lập tức.
+          Zyra chỉ ghi nhận thanh toán sau khi các thành viên đã chuyển tiền bên ngoài ứng dụng.
+          Ghi nhận thanh toán sẽ cập nhật số dư và giảm công nợ đề xuất ngay lập tức.
         </p>
       </motion.div>
 
@@ -122,6 +121,7 @@ export default function Settlements() {
           settlements={settlements}
           onMark={(s) => openPay({ from: s.from, to: s.to, amount: s.amount })}
           markLabel="Trả tiền"
+          emptyAction={onAddExpense ? <AppButton onClick={onAddExpense} icon={Plus}>Thêm khoản chi</AppButton> : null}
         />
       </div>
 

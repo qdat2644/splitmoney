@@ -2,6 +2,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pencil, Trash2, PiggyBank, Plus } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import AppButton from '../ui/AppButton';
+import EmptyState from '../ui/EmptyState';
 
 const CATEGORY_LABELS = {
   food: '🍜 Ăn uống', transport: '🚗 Di chuyển', shopping: '🛒 Mua sắm',
@@ -29,21 +31,12 @@ function UsageBar({ pct, overBudget }) {
 export default function BudgetList({ budgets, statusMap, onEdit, onDelete, onAdd, roomNameMap = {} }) {
   if (budgets.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-        className="glass-card p-12 flex flex-col items-center gap-5 text-center border-dashed border-2 border-white/5"
-      >
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-          <PiggyBank className="w-8 h-8 text-emerald-400" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-white mb-1">Chưa có ngân sách nào</h2>
-          <p className="text-gray-400 text-sm max-w-sm mx-auto">Thiết lập hạn mức chi tiêu để kiểm soát ngân sách nhóm hiệu quả hơn.</p>
-        </div>
-        <button onClick={onAdd} className="btn-primary text-sm flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Tạo ngân sách đầu tiên
-        </button>
-      </motion.div>
+      <EmptyState
+        icon={PiggyBank}
+        title="Chưa có ngân sách nào"
+        description="Thiết lập hạn mức theo danh mục hoặc theo phòng để Zyra theo dõi tiến độ chi tiêu trong tháng."
+        action={<AppButton onClick={onAdd} icon={Plus}>Tạo ngân sách đầu tiên</AppButton>}
+      />
     );
   }
 

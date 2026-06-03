@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Activity, ArrowRight, PiggyBank, Plus, Receipt, Sparkles, Wallet } from 'lucide-react';
+import { Activity, ArrowRight, Bell, PiggyBank, Plus, Receipt, Sparkles, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useBudgets } from '../hooks/useBudgets';
@@ -32,6 +32,8 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
   const avgPerPerson = members.length > 0 ? stats.totalExpenses / members.length : 0;
   const unresolvedAmount = settlements.reduce((sum, item) => sum + item.amount, 0);
   const largestImbalance = [...stats.perMember].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))[0];
+  const pendingCount = members.filter((member) => member.status === 'pending').length;
+  const isOwner = currentRoom?.role === 'owner';
   const narrative = buildRoomNarrative({ settlements, unresolvedAmount, activePlans, roomBudgets });
   const prioritySignals = buildRoomPrioritySignals({
     roomId,
@@ -61,6 +63,31 @@ export default function Dashboard({ onAddExpense, onEditExpense }) {
           </div>
         }
       />
+
+      {!loadingRoom && isOwner && pendingCount > 0 && (
+        <AppCard className="border border-amber-500/15 bg-amber-500/5 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Bell className="mt-0.5 h-4 w-4 text-amber-300" />
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  Có {pendingCount} yêu cầu tham gia đang chờ duyệt
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  Chủ phòng có thể duyệt hoặc từ chối trong trang Thành viên.
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`/rooms/${roomId}/members`}
+              className="btn-secondary inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-medium"
+            >
+              Duyệt yêu cầu
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </AppCard>
+      )}
 
       {loadingRoom ? (
         <SkeletonPage />

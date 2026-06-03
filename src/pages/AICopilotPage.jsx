@@ -4,6 +4,7 @@ import { useCopilotWorkspace } from '../hooks/useCopilotWorkspace';
 import RecommendationCard from '../components/copilot/RecommendationCard';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
+import ErrorState from '../components/ui/ErrorState';
 import PageHeader from '../components/ui/PageHeader';
 import { formatCurrency } from '../utils/formatters';
 import { compareRecommendationPriority, dedupeRecommendations, excludeSimilarRecommendations } from '../utils/recommendationDedupe';
@@ -62,7 +63,12 @@ export default function AICopilotPage() {
       />
 
       {loading && <CopilotSkeleton />}
-      {!loading && error && <AppCard className="p-5 text-sm text-red-300">{error}</AppCard>}
+      {!loading && error && (
+        <ErrorState
+          description="Zyra chưa thể tải trợ lý AI. Bạn có thể thử lại ngay."
+          onRetry={refetch}
+        />
+      )}
 
       {!loading && data && (
         <>

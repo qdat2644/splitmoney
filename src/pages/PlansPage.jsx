@@ -22,6 +22,7 @@ import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
 import AppInput from '../components/ui/AppInput';
 import AppSelect from '../components/ui/AppSelect';
+import ErrorState from '../components/ui/ErrorState';
 import { ModalLayout, ModalHeader, ModalBody, ModalFooter } from '../components/ui/ModalLayout';
 import { SkeletonCard } from '../components/ui/Skeleton';
 
@@ -324,7 +325,7 @@ function CreatePlanModal({ onClose, onCreate }) {
         </ModalBody>
         <ModalFooter>
           <AppButton type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">Huỷ</AppButton>
-          <AppButton type="submit" isLoading={saving} icon={Plus} className="w-full sm:w-auto">
+          <AppButton type="submit" loading={saving} icon={Plus} className="w-full sm:w-auto">
             Tạo
           </AppButton>
         </ModalFooter>
@@ -383,6 +384,7 @@ export default function PlansPage() {
         });
       }
       toast.success('Đã lưu kế hoạch AI thành công');
+      toast.info('Kế hoạch là dự toán; số dư chỉ thay đổi khi bạn chuyển mục kế hoạch thành khoản chi.');
       setAiResult(null);
     } catch(err) {
       toast.error(err.message);
@@ -402,6 +404,7 @@ export default function PlansPage() {
   const handleCreatePlan = async (data) => {
     const plan = await createPlan(data);
     toast.success('Đã tạo kế hoạch');
+    toast.info('Kế hoạch là dự toán; số dư chưa thay đổi cho đến khi bạn chuyển thành khoản chi.');
     return plan;
   };
 
@@ -475,7 +478,8 @@ export default function PlansPage() {
 
   const handleDoConvert = async (planExpenseId, convertData) => {
     const res = await convertExpense(convertTarget.planId, planExpenseId, convertData);
-    toast.success('Đã chuyển thành khoản chi');
+    toast.success('Chi phí kế hoạch đã trở thành khoản chi thực tế.');
+    toast.info('Phòng, công nợ và thanh toán đề xuất đã cập nhật.');
     setConvertTarget(null);
     return res;
   };
@@ -496,12 +500,11 @@ export default function PlansPage() {
                 onClick={() => { setShowAIPanel(true); setAiResult(null); }} 
                 variant="secondary"
                 icon={Sparkles}
-                className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border-purple-500/20"
               >
-                AI Tạo
+                Tạo bằng AI
               </AppButton>
               <AppButton onClick={() => setShowCreate(true)} icon={Plus}>
-                Thủ công
+                Tạo kế hoạch
               </AppButton>
             </>
           }
@@ -528,11 +531,10 @@ export default function PlansPage() {
         )}
 
         {!loading && error && (
-          <AppCard className="p-6 flex flex-col items-center gap-3 border border-red-500/20">
-            <AlertCircle className="w-10 h-10 text-red-400" />
-            <p className="text-white">{error}</p>
-            <AppButton onClick={refetch} icon={RefreshCw}>Thử lại</AppButton>
-          </AppCard>
+          <ErrorState
+            description="Zyra chưa thể tải danh sách kế hoạch. Bạn có thể thử lại ngay."
+            onRetry={refetch}
+          />
         )}
 
         {!loading && !error && plans.length === 0 && (

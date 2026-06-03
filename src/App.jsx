@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 
 import AppShell from './components/layout/AppShell';
 import RoomTopBarActions from './components/layout/RoomTopBarActions';
@@ -97,7 +97,19 @@ function AdminGuard({ children }) {
 
 function RoomRoutes() {
   const { loadingRoom, currentRoom } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [expenseModal, setExpenseModal] = useState({ open: false, editData: null });
+
+  const openAdd = () => setExpenseModal({ open: true, editData: null });
+  const openEdit = (expense) => setExpenseModal({ open: true, editData: expense });
+  const closeModal = () => setExpenseModal({ open: false, editData: null });
+
+  useEffect(() => {
+    if (loadingRoom || !currentRoom || !location.state?.openAddExpense) return;
+    setExpenseModal({ open: true, editData: null });
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [currentRoom, loadingRoom, location.pathname, location.state, navigate]);
 
   if (loadingRoom) {
     return (
@@ -107,17 +119,13 @@ function RoomRoutes() {
     );
   }
 
-  const openAdd = () => setExpenseModal({ open: true, editData: null });
-  const openEdit = (expense) => setExpenseModal({ open: true, editData: expense });
-  const closeModal = () => setExpenseModal({ open: false, editData: null });
-
   return (
     <AppShell mode="room" topBarTitle={currentRoom?.room?.name} topBarActions={<RoomTopBarActions onAddExpense={openAdd} />}>
       <Routes>
         <Route path="dashboard" element={<Dashboard onAddExpense={openAdd} onEditExpense={openEdit} />} />
         <Route path="expenses" element={<Expenses onAddExpense={openAdd} onEditExpense={openEdit} />} />
         <Route path="members" element={<Members />} />
-        <Route path="settlements" element={<Settlements />} />
+        <Route path="settlements" element={<Settlements onAddExpense={openAdd} />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>

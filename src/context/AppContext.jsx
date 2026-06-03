@@ -202,7 +202,8 @@ export function AppProvider({ children }) {
       };
 
       setExpenses(prev => [newExpense, ...prev]);
-      toast.success('Đã thêm khoản chi!');
+      toast.success('Khoản chi đã được ghi nhận.');
+      toast.info('Công nợ, thanh toán đề xuất và ngân sách liên quan đã cập nhật.');
       return newExpense;
     } catch (err) {
       toast.error(err.message || 'Lỗi thêm khoản chi');
@@ -350,7 +351,8 @@ export function AppProvider({ children }) {
         createdAt: p.createdAt,
         createdByUserId: p.createdByUserId,
       }, ...prev]);
-      toast.success('Đã ghi nhận thanh toán!');
+      toast.success('Thanh toán đã được ghi nhận.');
+      toast.info('Số dư giữa các thành viên đã thay đổi.');
       return res;
     } catch (err) {
       toast.error(err.message || 'Lỗi ghi thanh toán');

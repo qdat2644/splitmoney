@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
+import ErrorState from '../../components/ui/ErrorState';
 import { adminApi } from '../../services/apiClient';
 import AdminOverviewTab from './AdminOverviewTab';
 import AdminUsersTab from './AdminUsersTab';
@@ -117,9 +118,11 @@ export default function AdminWorkspace() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-100">
-          {error}
-        </div>
+        <ErrorState
+          title="Không thể tải dữ liệu quản trị"
+          description="Một phần dữ liệu vận hành chưa sẵn sàng. Bạn có thể làm mới lại."
+          onRetry={loadOverview}
+        />
       )}
 
       {renderTab()}

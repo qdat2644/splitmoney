@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Users, LogOut, Loader2, HardDrive } from 'lucide-react';
+import { ArrowRight, CheckCircle, Copy, DoorOpen, HardDrive, Plus, Receipt, Users } from 'lucide-react';
 import { roomApi } from '../../services/apiClient';
 import { memberService, expenseService } from '../../services/storageService';
 
 import { useNavigate } from 'react-router-dom';
 import { SkeletonRow } from '../../components/ui/Skeleton';
+import AppButton from '../../components/ui/AppButton';
+import AppCard from '../../components/ui/AppCard';
+import AppInput from '../../components/ui/AppInput';
+import EmptyState from '../../components/ui/EmptyState';
+import PageHeader from '../../components/ui/PageHeader';
 
 export default function RoomList() {
   const { rooms, setRooms, loadingRooms, toast } = useApp();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   const [isJoin, setIsJoin] = useState(false);
@@ -19,6 +24,23 @@ export default function RoomList() {
   const [loading, setLoading] = useState(false);
   const [guestsToClaim, setGuestsToClaim] = useState(null);
   const [selectedGuestId, setSelectedGuestId] = useState('');
+  const [createdRoom, setCreatedRoom] = useState(null);
+  const roomNameInputRef = useRef(null);
+
+  const copyRoomCode = async (roomCode) => {
+    if (!roomCode) return;
+    try {
+      await navigator.clipboard.writeText(roomCode);
+      toast.success('Đã sao chép mã phòng.');
+    } catch {
+      toast.info(`Mã phòng: ${roomCode}`);
+    }
+  };
+
+  const openCreatedRoom = (roomId, options = {}) => {
+    if (!roomId) return;
+    navigate(`/rooms/${roomId}/dashboard`, options);
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -26,10 +48,17 @@ export default function RoomList() {
     setLoading(true);
     try {
       const res = await roomApi.createRoom({ name });
-      toast.success('Tạo room thành công!');
+      toast.success('Đã tạo phòng.');
       // Refresh rooms
       const data = await roomApi.getRooms();
       setRooms(data.memberships);
+      const membership = data.memberships.find((item) => item.roomId === res.room?.id);
+      setCreatedRoom({
+        id: res.room?.id,
+        name: res.room?.name,
+        code: res.room?.code,
+        membership,
+      });
       setName('');
     } catch (err) {
       toast.error(err.message);
@@ -91,67 +120,129 @@ export default function RoomList() {
   };
 
   return (
-    <div data-testid="rooms-page" className="max-w-6xl mx-auto space-y-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Phòng của bạn</h1>
-          <p className="text-gray-400">Chào, {user?.name}</p>
-        </div>
+    <main data-testid="rooms-page" className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        eyebrow="Nhóm"
+        title="Phòng"
+        subtitle={`Quản lý các phòng chia sẻ chi tiêu${user?.name ? ` của ${user.name}` : ''}.`}
+      />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          <div className="card p-6 border border-white/5">
-            <h2 className="text-lg font-semibold text-white mb-4">Tạo phòng mới</h2>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <input 
-                className="input-field" placeholder="Tên phòng..." 
-                data-testid="room-name-input"
-                value={name} onChange={e => setName(e.target.value)}
-              />
-              <button data-testid="room-create-submit" disabled={loading} type="submit" className="btn-primary w-full flex justify-center gap-2">
-                <Plus className="w-4 h-4" /> Tạo ngay
-              </button>
-            </form>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <AppCard className="border border-white/5 bg-dark-800 p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-dark-900">
+              <Plus className="h-4 w-4 text-blue-300" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">Tạo phòng mới</h2>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">Dùng cho nhà chung, chuyến đi hoặc nhóm chi tiêu riêng.</p>
+            </div>
           </div>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <AppInput
+              ref={roomNameInputRef}
+              data-testid="room-name-input"
+              label="Tên phòng"
+              placeholder="VD: Nhà Quận 3"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+            <AppButton data-testid="room-create-submit" loading={loading} type="submit" icon={Plus} fullWidth>
+              Tạo phòng
+            </AppButton>
+          </form>
+        </AppCard>
 
-          <div className="card p-6 border border-white/5">
-            <h2 className="text-lg font-semibold text-white mb-4">Tham gia phòng</h2>
-            <form onSubmit={handleJoin} className="space-y-3">
-              {guestsToClaim ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-400">Bạn có phải là một trong những thành viên ảo sau?</p>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-white bg-dark-800 p-2 rounded cursor-pointer border border-white/5">
-                      <input type="radio" value="" checked={selectedGuestId === ''} onChange={() => setSelectedGuestId('')} />
-                      Không, tôi là người mới
+        <AppCard className="border border-white/5 bg-dark-800 p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-dark-900">
+              <Users className="h-4 w-4 text-blue-300" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">Tham gia phòng</h2>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">Nhập mã 6 ký tự để gửi yêu cầu tham gia.</p>
+            </div>
+          </div>
+          <form onSubmit={handleJoin} className="space-y-3">
+            {guestsToClaim ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-400">Bạn có phải là một trong những thành viên ảo sau?</p>
+                <div className="space-y-2">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/5 bg-dark-900/60 p-2 text-sm text-white">
+                    <input type="radio" value="" checked={selectedGuestId === ''} onChange={() => setSelectedGuestId('')} />
+                    Không, tôi là người mới
+                  </label>
+                  {guestsToClaim.map(g => (
+                    <label key={g.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/5 bg-dark-900/60 p-2 text-sm text-white">
+                      <input type="radio" value={g.id} checked={selectedGuestId === g.id} onChange={() => setSelectedGuestId(g.id)} />
+                      Tôi là {g.displayName}
                     </label>
-                    {guestsToClaim.map(g => (
-                      <label key={g.id} className="flex items-center gap-2 text-white bg-dark-800 p-2 rounded cursor-pointer border border-white/5">
-                        <input type="radio" value={g.id} checked={selectedGuestId === g.id} onChange={() => setSelectedGuestId(g.id)} />
-                        Tôi là {g.displayName}
-                      </label>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setGuestsToClaim(null)} className="btn-secondary w-full">Trở lại</button>
-                    <button disabled={loading} type="submit" className="btn-primary w-full">Xác nhận</button>
-                  </div>
+                  ))}
                 </div>
-              ) : (
-                <>
-                  <input 
-                    className="input-field uppercase" placeholder="Nhập mã CODE (6 ký tự)..." 
-                    value={code} onChange={e => setCode(e.target.value.toUpperCase())}
-                    maxLength={6}
-                  />
-                  <button disabled={loading} type="submit" className="btn-secondary w-full flex justify-center gap-2">
-                    <Users className="w-4 h-4" /> Yêu cầu tham gia
-                  </button>
-                </>
-              )}
-            </form>
-          </div>
-        </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <AppButton type="button" variant="secondary" onClick={() => setGuestsToClaim(null)} fullWidth>Trở lại</AppButton>
+                  <AppButton loading={loading} type="submit" fullWidth>Xác nhận</AppButton>
+                </div>
+              </div>
+            ) : (
+              <>
+                <AppInput
+                  className="uppercase"
+                  label="Mã phòng"
+                  placeholder="Nhập mã CODE"
+                  value={code}
+                  onChange={e => setCode(e.target.value.toUpperCase())}
+                  maxLength={6}
+                />
+                <AppButton loading={loading} type="submit" variant="secondary" icon={Users} fullWidth>
+                  Yêu cầu tham gia
+                </AppButton>
+              </>
+            )}
+          </form>
+        </AppCard>
+      </section>
 
-        <h2 className="text-lg font-semibold text-white mb-4">Danh sách phòng</h2>
+      {createdRoom && (
+        <AppCard className="border border-emerald-500/15 bg-emerald-500/5 p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-300" />
+                <h2 className="text-sm font-semibold text-white">Phòng đã được tạo</h2>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                Chia sẻ mã phòng để thành viên gửi yêu cầu tham gia. Chủ phòng sẽ duyệt yêu cầu trong trang Thành viên.
+              </p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-white/5 bg-dark-900/70 px-3 py-2">
+                <span className="text-xs text-gray-500">Mã phòng</span>
+                <span className="font-mono text-sm font-semibold tracking-widest text-white">{createdRoom.code}</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
+              <AppButton size="sm" variant="secondary" icon={Copy} onClick={() => copyRoomCode(createdRoom.code)}>
+                Sao chép mã
+              </AppButton>
+              <AppButton size="sm" variant="secondary" icon={ArrowRight} onClick={() => openCreatedRoom(createdRoom.id)}>
+                Mở phòng
+              </AppButton>
+              <AppButton
+                size="sm"
+                icon={Receipt}
+                onClick={() => openCreatedRoom(createdRoom.id, { state: { openAddExpense: true } })}
+              >
+                Thêm khoản chi
+              </AppButton>
+            </div>
+          </div>
+        </AppCard>
+      )}
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white">Danh sách phòng</h2>
+          <span className="text-xs text-gray-500">{rooms.length} phòng</span>
+        </div>
         {loadingRooms ? (
           <div className="space-y-3">
             <SkeletonRow />
@@ -159,44 +250,59 @@ export default function RoomList() {
             <SkeletonRow />
           </div>
         ) : rooms.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">
-            Bạn chưa tham gia phòng nào.
-          </div>
+          <EmptyState
+            icon={DoorOpen}
+            title="Bạn chưa tham gia phòng nào"
+            description="Tạo phòng mới hoặc nhập mã mời để bắt đầu theo dõi chi tiêu chung."
+            action={<AppButton onClick={() => roomNameInputRef.current?.focus()} icon={Plus}>Tạo phòng ở trên</AppButton>}
+            compact
+          />
         ) : (
           <div className="space-y-3">
             {rooms.map(membership => (
-              <div 
-                key={membership.id} 
+              <AppCard
+                key={membership.id}
                 data-testid="room-card"
-                className={`card p-4 flex items-center justify-between transition-colors
-                  ${membership.status === 'approved' ? 'hover:bg-white/5 cursor-pointer border-blue-500/30' : 'opacity-75 border-white/5'}
+                hover={membership.status === 'approved'}
+                className={`flex flex-col gap-3 border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between
+                  ${membership.status === 'approved' ? 'cursor-pointer border-blue-500/20' : 'border-white/5 opacity-75'}
                 `}
                 onClick={() => membership.status === 'approved' && navigate(`/rooms/${membership.roomId}/dashboard`)}
               >
-                <div>
-                  <h3 className="font-semibold text-white text-lg">{membership.room.name}</h3>
-                  <p className="text-xs text-gray-500 mt-1">Code: <span className="text-gray-300 font-mono tracking-widest">{membership.room.code}</span></p>
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-white">{membership.room.name}</h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Mã phòng: <span className="font-mono tracking-widest text-gray-300">{membership.room.code}</span>
+                  </p>
                 </div>
-                <div>
-                  {membership.status === 'approved' ? (
-                    <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-medium">Đã vào</span>
-                  ) : membership.status === 'pending' ? (
-                    <span className="text-xs bg-yellow-500/10 text-yellow-400 px-2.5 py-1 rounded-full font-medium">Chờ duyệt</span>
-                  ) : (
-                    <span className="text-xs bg-red-500/10 text-red-400 px-2.5 py-1 rounded-full font-medium">Bị từ chối</span>
-                  )}
+                <div className="shrink-0">
+                  <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                    {membership.status === 'approved' && (
+                      <span className="rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-gray-300">
+                        {membership.role === 'owner' ? 'Chủ phòng' : 'Thành viên'}
+                      </span>
+                    )}
+                    {membership.status === 'approved' ? (
+                      <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">Đã vào</span>
+                    ) : membership.status === 'pending' ? (
+                      <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-400">Chờ duyệt</span>
+                    ) : (
+                      <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400">Bị từ chối</span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </AppCard>
             ))}
           </div>
         )}
+      </section>
 
-        <div className="mt-8 pt-6 border-t border-white/5 text-center">
-          <button onClick={handleOpenLocal} className="text-sm text-gray-400 hover:text-white flex items-center justify-center gap-2 mx-auto transition-colors">
-            <HardDrive className="w-4 h-4" />
-            Xem lại dữ liệu cũ (Local Offline)
-          </button>
-        </div>
+      <div className="border-t border-white/5 pt-5 text-center">
+        <button onClick={handleOpenLocal} className="mx-auto flex items-center justify-center gap-2 text-sm text-gray-400 transition-colors hover:text-white">
+          <HardDrive className="h-4 w-4" />
+          Xem lại dữ liệu cũ trên máy này
+        </button>
       </div>
+    </main>
   );
 }

@@ -13,6 +13,7 @@ import { useForecasts } from '../hooks/useForecasts';
 import { formatCurrency } from '../utils/formatters';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
+import ErrorState from '../components/ui/ErrorState';
 import EmptyState from '../components/ui/EmptyState';
 import PageHeader from '../components/ui/PageHeader';
 import StatCard from '../components/ui/StatCard';
@@ -76,7 +77,12 @@ export default function ForecastsPage() {
       />
 
       {loading && <ForecastSkeleton />}
-      {!loading && error && <AppCard className="border border-red-500/20 p-5 text-sm text-red-300">{error}</AppCard>}
+      {!loading && error && (
+        <ErrorState
+          description="Zyra chưa thể tải dự báo tháng này. Bạn có thể thử lại ngay."
+          onRetry={refetch}
+        />
+      )}
 
       {!loading && data && (
         <div className="space-y-6">

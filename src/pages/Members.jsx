@@ -1,7 +1,7 @@
 // Members.jsx — Member management page
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, X } from 'lucide-react';
+import { Copy, UserPlus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import MemberCard from '../components/members/MemberCard';
 import AddGuestModal from '../components/members/AddGuestModal';
@@ -12,12 +12,22 @@ import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
 
 export default function Members() {
-  const { members, approvedMembers, approveMember, rejectMember, removeMember, currentRoom, currentUser } = useApp();
+  const { members, approvedMembers, approveMember, rejectMember, currentRoom, currentUser, toast } = useApp();
   const [showAddGuest, setShowAddGuest] = useState(false);
   
   const isOwner = currentRoom?.role === 'owner';
+  const roomCode = currentRoom?.room?.code;
   
   const pendingMembers = members.filter(m => m.status === 'pending');
+  const copyRoomCode = async () => {
+    if (!roomCode) return;
+    try {
+      await navigator.clipboard.writeText(roomCode);
+      toast.success('Đã sao chép mã phòng.');
+    } catch {
+      toast.info(`Mã phòng: ${roomCode}`);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -26,13 +36,39 @@ export default function Members() {
         title="Thành viên"
         subtitle={`${approvedMembers.length} thành viên chính thức/ảo`}
         actions={
-          isOwner && (
-            <AppButton onClick={() => setShowAddGuest(true)} icon={UserPlus} variant="ghost" className="border border-white/5 bg-white/5">
-              <span className="hidden sm:inline">Thêm người ảo</span>
-            </AppButton>
-          )
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${isOwner ? 'border-blue-500/15 bg-blue-500/10 text-blue-300' : 'border-white/5 bg-white/5 text-gray-300'}`}>
+              {isOwner ? 'Chủ phòng' : 'Thành viên'}
+            </span>
+            {isOwner && (
+              <AppButton onClick={() => setShowAddGuest(true)} icon={UserPlus} variant="ghost" className="border border-white/5 bg-white/5">
+                <span className="hidden sm:inline">Thêm người ảo</span>
+              </AppButton>
+            )}
+          </div>
         }
       />
+
+      {isOwner && roomCode && (
+        <AppCard className="border border-white/5 bg-dark-800 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Mời thành viên bằng mã phòng</p>
+              <p className="mt-1 text-xs text-gray-400">
+                Người mới nhập mã này ở trang Phòng, sau đó chủ phòng duyệt yêu cầu tại đây.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <span className="rounded-lg border border-white/5 bg-dark-900/70 px-3 py-2 font-mono text-sm font-semibold tracking-widest text-white">
+                {roomCode}
+              </span>
+              <AppButton size="sm" variant="secondary" icon={Copy} onClick={copyRoomCode}>
+                Sao chép mã
+              </AppButton>
+            </div>
+          </div>
+        </AppCard>
+      )}
 
       {/* Pending members */}
       {isOwner && pendingMembers.length > 0 && (
@@ -85,6 +121,7 @@ export default function Members() {
               Mời bạn bè tham gia bằng mã phòng: <span className="font-mono text-white tracking-widest">{currentRoom?.room?.code}</span>
             </>
           }
+          action={roomCode ? <AppButton size="sm" variant="secondary" icon={Copy} onClick={copyRoomCode}>Sao chép mã</AppButton> : null}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

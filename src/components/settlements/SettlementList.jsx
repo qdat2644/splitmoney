@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Wallet } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import Avatar from '../ui/Avatar';
+import EmptyState from '../ui/EmptyState';
 import { formatCurrency } from '../../utils/formatters';
 
 export function SettlementItem({ settlement, index = 0, onMark, markLabel = 'Trả tiền' }) {
@@ -60,18 +61,16 @@ export function SettlementItem({ settlement, index = 0, onMark, markLabel = 'Tr�
   );
 }
 
-export default function SettlementList({ settlements, onMark, markLabel }) {
+export default function SettlementList({ settlements, onMark, markLabel, emptyAction }) {
   if (settlements.length === 0) {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-12 flex flex-col items-center gap-5 text-center border-dashed border-2 border-emerald-500/10 bg-emerald-500/5">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-          <Wallet className="w-8 h-8 text-emerald-400" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-emerald-400 mb-1">Tất cả đã cân bằng!</h2>
-          <p className="text-gray-400 text-sm max-w-sm mx-auto">Không có khoản nợ nào cần thanh toán giữa các thành viên.</p>
-        </div>
-      </motion.div>
+      <EmptyState
+        icon={Wallet}
+        title="Chưa có công nợ cần thanh toán"
+        description="Khi phòng có khoản chi chung, Zyra sẽ đề xuất ai nên trả cho ai để cân bằng nhanh hơn."
+        action={emptyAction}
+        color="emerald"
+      />
     );
   }
 

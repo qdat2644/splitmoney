@@ -1,7 +1,8 @@
 // ConvertExpenseModal.jsx — Convert a plan expense into a real room expense
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, Loader2, ExternalLink, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency, todayStr } from '../../utils/formatters';
 import { useRoomMembers } from '../../hooks/useRoomMembers';
 import { ModalLayout, ModalHeader, ModalBody, ModalFooter } from '../ui/ModalLayout';
@@ -19,6 +20,7 @@ import AppButton from '../ui/AppButton';
  *   members      — Member[] for selected room (pass from parent or load inside)
  */
 export default function ConvertExpenseModal({ open, onClose, planExpense, rooms, onConvert }) {
+  const navigate = useNavigate();
   const [step, setStep]         = useState(1); // 1=choose room, 2=choose payer, 3=confirm
   const [roomId, setRoomId]     = useState('');
   const [paidBy, setPaidBy]     = useState('');
@@ -40,6 +42,10 @@ export default function ConvertExpenseModal({ open, onClose, planExpense, rooms,
   };
 
   const handleClose = () => { reset(); onClose(); };
+  const goToRooms = () => {
+    handleClose();
+    navigate('/rooms');
+  };
 
   const handleConvert = async () => {
     if (!roomId || !paidBy) { setError('Vui lòng chọn phòng và người trả'); return; }
@@ -131,9 +137,19 @@ export default function ConvertExpenseModal({ open, onClose, planExpense, rooms,
 
                 {/* ── Step 1: Room ── */}
                 {rooms?.length === 0 ? (
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-gray-300">1. Chọn phòng *</label>
-                    <p className="text-xs text-gray-500">Bạn chưa có phòng nào</p>
+                  <div className="rounded-xl border border-white/5 bg-white/3 p-4">
+                    <p className="text-sm font-semibold text-white">Bạn cần một phòng để ghi nhận khoản chi thực tế.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                      Kế hoạch chỉ là dự toán. Khi có phòng, Zyra mới có thể tạo khoản chi, cập nhật công nợ và thanh toán đề xuất.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <AppButton type="button" size="sm" icon={Plus} onClick={goToRooms}>
+                        Tạo phòng
+                      </AppButton>
+                      <AppButton type="button" size="sm" variant="secondary" icon={ArrowRight} onClick={goToRooms}>
+                        Đi tới danh sách phòng
+                      </AppButton>
+                    </div>
                   </div>
                 ) : (
                   <AppSelect

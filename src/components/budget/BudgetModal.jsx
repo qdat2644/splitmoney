@@ -1,5 +1,6 @@
 // BudgetModal.jsx — Create / edit a budget entry
 import { useState, useEffect } from 'react';
+import { Check, PiggyBank } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { ModalLayout, ModalHeader, ModalBody, ModalFooter } from '../ui/ModalLayout';
 import AppInput from '../ui/AppInput';
@@ -84,7 +85,7 @@ export default function BudgetModal({ open, onClose, initialData, onSave, rooms 
                   type="button"
                   onClick={() => setScope('personal')}
                   className={`px-3 py-2 rounded-xl border text-sm ${
-                    scope === 'personal' ? 'border-emerald-500/50 bg-emerald-500/10 text-white' : 'border-white/8 text-gray-400'
+                    scope === 'personal' ? 'border-blue-500/50 bg-blue-500/10 text-white' : 'border-white/8 text-gray-400'
                   }`}
                 >
                   Cá nhân
@@ -93,7 +94,7 @@ export default function BudgetModal({ open, onClose, initialData, onSave, rooms 
                   type="button"
                   onClick={() => setScope('room')}
                   className={`px-3 py-2 rounded-xl border text-sm ${
-                    scope === 'room' ? 'border-emerald-500/50 bg-emerald-500/10 text-white' : 'border-white/8 text-gray-400'
+                    scope === 'room' ? 'border-blue-500/50 bg-blue-500/10 text-white' : 'border-white/8 text-gray-400'
                   }`}
                 >
                   Theo phòng
@@ -124,7 +125,7 @@ export default function BudgetModal({ open, onClose, initialData, onSave, rooms 
                     onClick={() => setCategory(cat.id)}
                     className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-150
                       ${category === cat.id
-                        ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
+                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-300'
                         : 'border-white/8 text-gray-400 hover:border-white/20'}`}
                   >
                     <span className="text-base">{cat.icon}</span>
@@ -181,7 +182,7 @@ export default function BudgetModal({ open, onClose, initialData, onSave, rooms 
             type="submit"
             loading={saving}
             icon={Check}
-            className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 border-none"
+            className="w-full sm:w-auto"
           >
             {initialData?.id ? 'Lưu thay đổi' : 'Tạo ngân sách'}
           </AppButton>

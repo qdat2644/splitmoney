@@ -3,15 +3,16 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  AlertCircle,
   ArrowRight,
   BarChart3,
   Bot,
   CalendarDays,
+  CheckCircle,
   DoorOpen,
+  PiggyBank,
   Plus,
-  RefreshCw,
   TrendingUp,
+  WalletCards,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
@@ -22,7 +23,6 @@ import { compareRecommendationPriority, dedupeRecommendations } from '../utils/r
 import { exportApi } from '../services/apiClient';
 
 import NetBalanceHero from '../components/personal/NetBalanceHero';
-import SummaryCard from '../components/personal/SummaryCard';
 import CategoryBreakdown from '../components/personal/CategoryBreakdown';
 import RoomBreakdownList from '../components/personal/RoomBreakdownList';
 import RecentExpensesList from '../components/personal/RecentExpensesList';
@@ -33,33 +33,30 @@ import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
+import StatCard from '../components/ui/StatCard';
+import ErrorState from '../components/ui/ErrorState';
 import RecommendationCard from '../components/copilot/RecommendationCard';
 
 export default function PersonalDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Single consolidated request: replaces useDashboardSummary + useDashboardAnalytics + useDashboardInsights.
-  // One HTTP round-trip, one snapshot computation on the server.
   const { data: dashboardData, loading, error, refetch } = useDashboard();
-
-  // Slice the consolidated payload into named sections used by each sub-component.
-  const data     = dashboardData?.summary   ?? null;   // shape identical to old /me/summary
+  const data = dashboardData?.summary ?? null;
 
   const { status: budgetStatus } = useBudgets();
   const { data: copilotData } = useCopilotWorkspace();
 
-  // Memoize derived recommendation arrays — these are pure transforms of copilotData
-  // and should not recompute on every render tick caused by unrelated state changes.
   const uniqueRecommendations = useMemo(
     () => dedupeRecommendations(copilotData?.recommendations ?? []),
     [copilotData?.recommendations],
   );
   const topPriorities = useMemo(
-    () => [...uniqueRecommendations].sort(compareRecommendationPriority).slice(0, 4),
+    () => [...uniqueRecommendations].sort(compareRecommendationPriority).slice(0, 3),
     [uniqueRecommendations],
   );
 
+  const nextAction = topPriorities[0];
   const narrative = buildPersonalNarrative({ data, copilotData, budgetStatus });
 
   const greeting = () => {
@@ -86,18 +83,10 @@ export default function PersonalDashboard() {
       {loading && <DashboardSkeleton />}
 
       {!loading && error && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="glass-card flex flex-col items-center gap-4 border border-red-500/10 p-8"
-        >
-          <AlertCircle className="h-10 w-10 text-red-400" />
-          <p className="text-sm font-semibold text-white">Không thể tải dữ liệu</p>
-          <p className="text-center text-xs text-gray-400">{error}</p>
-          <button onClick={refetch} className="btn-primary flex items-center gap-2 text-xs">
-            <RefreshCw className="h-3.5 w-3.5" /> Thử lại
-          </button>
-        </motion.div>
+        <ErrorState
+          description="Zyra chưa thể tải tổng quan tài chính. Bạn có thể thử lại ngay."
+          onRetry={refetch}
+        />
       )}
 
       {!loading && !error && data && (
@@ -115,96 +104,85 @@ export default function PersonalDashboard() {
             />
           ) : (
             <div className="space-y-6">
-              <section className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(15rem,0.55fr)]">
-                <NetBalanceHero
-                  netBalance={data.netBalance}
-                  totalIOwe={data.totalIOwe}
-                  totalOwedToMe={data.totalOwedToMe}
-                  eyebrow={narrative.eyebrow}
-                  headline={narrative.headline}
-                  guidance={narrative.guidance}
-                />
-
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                  <SummaryCard
-                    label="Chi tháng này"
-                    value={formatCurrency(data.totalSpentThisMonth, true)}
-                    icon={CalendarDays}
-                    color="blue"
-                    index={0}
+              <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.72fr)]">
+                <div className="space-y-4">
+                  <NetBalanceHero
+                    netBalance={data.netBalance}
+                    totalIOwe={data.totalIOwe}
+                    totalOwedToMe={data.totalOwedToMe}
+                    eyebrow={narrative.eyebrow}
+                    headline={narrative.headline}
+                    guidance={narrative.guidance}
                   />
-                  <SummaryCard
-                    label="Phòng hoạt động"
-                    value={`${data.activeRoomsCount} phòng`}
-                    icon={DoorOpen}
-                    color="purple"
-                    index={1}
-                  />
+                  <StatusLine narrative={narrative} nextAction={nextAction} />
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <StatCard
+                      title="Chi tháng này"
+                      value={formatCurrency(data.totalSpentThisMonth, true)}
+                      icon={CalendarDays}
+                      color="blue"
+                    />
+                    <StatCard
+                      title="Phòng hoạt động"
+                      value={`${data.activeRoomsCount} phòng`}
+                      icon={DoorOpen}
+                      color="purple"
+                    />
+                    <StatCard
+                      title="Cần thanh toán"
+                      value={formatCurrency(data.totalIOwe || 0, true)}
+                      icon={WalletCards}
+                      color={(data.totalIOwe || 0) > 0 ? 'amber' : 'emerald'}
+                      subtitle={(data.totalIOwe || 0) > 0 ? 'Khoản bạn đang nợ' : 'Chưa có khoản cần trả'}
+                    />
+                  </div>
                 </div>
+
+                <PriorityPanel priorities={topPriorities} />
               </section>
 
               <section className="space-y-3">
                 <SectionHeading
-                  icon={Bot}
-                  title="Việc cần chú ý"
-                  description="Những tín hiệu quan trọng nhất Zyra đang thấy trong dữ liệu hiện tại."
+                  title="Tổng quan nhanh"
+                  description="Bốn lát cắt đủ để biết tiền đang đi đâu và có giới hạn nào cần xem lại."
                 />
-                <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
-                  {topPriorities.length === 0 ? (
-                    <p className="text-sm text-gray-400">
-                      Chưa có cảnh báo đáng chú ý. Dòng tiền tháng này đang giữ nhịp ổn định.
-                    </p>
-                  ) : (
-                    topPriorities.map((recommendation) => (
-                      <RecommendationCard key={recommendation.id} recommendation={recommendation} compact />
-                    ))
-                  )}
-                </AppCard>
-              </section>
-
-              <section className="space-y-3">
-                <SectionHeading
-                  title="Bức tranh tài chính"
-                  description="Phân bổ chi tiêu và nhịp vận động của các phòng."
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <BudgetHealthSummary status={budgetStatus} onOpenBudget={() => navigate('/budget')} />
                   <CategoryBreakdown data={data.categoryBreakdown} />
                   <RoomBreakdownList data={data.roomBreakdown} />
+                  <RecentExpensesList data={data.recentExpenses} />
                 </div>
-              </section>
-
-              <section className="space-y-3">
-                <SectionHeading
-                  title="Hoạt động gần đây"
-                  description="Ngữ cảnh hỗ trợ cho những gì đang diễn ra, không phải trọng tâm chính."
-                />
-                <RecentExpensesList data={data.recentExpenses} />
               </section>
 
               <section className="space-y-3">
                 <SectionHeading
                   title="Đi sâu hơn"
-                  description="Mở đúng không gian khi bạn cần xem phân tích, dự báo hoặc trợ lý tài chính đầy đủ."
+                  description="Chọn đúng trang cho câu hỏi tiếp theo, không cần đọc hết bảng điều khiển."
                 />
-                <BudgetStatusCard status={budgetStatus} />
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <DeepLinkCard
                     icon={BarChart3}
-                    title="Xem phân tích chi tiết"
+                    title="Phân tích chi tiết"
                     description="Xu hướng, danh mục nổi bật và tín hiệu gần đây."
                     onClick={() => navigate('/analytics')}
                   />
                   <DeepLinkCard
                     icon={TrendingUp}
-                    title="Xem dự báo tháng này"
-                    description="Quỹ đạo cuối tháng, rủi ro ngân sách và khoản lặp lại."
+                    title="Dự báo tháng này"
+                    description="Quỹ đạo cuối tháng và rủi ro ngân sách."
                     onClick={() => navigate('/forecasts')}
                   />
                   <DeepLinkCard
                     icon={Bot}
-                    title="Mở Trợ lý AI"
-                    description="Ưu tiên, cơ hội và hồ sơ tài chính trong một không gian riêng."
+                    title="Trợ lý AI"
+                    description="Ưu tiên, cơ hội và hồ sơ tài chính."
                     onClick={() => navigate('/copilot')}
+                  />
+                  <DeepLinkCard
+                    icon={PiggyBank}
+                    title="Ngân sách"
+                    description="Xem hạn mức và điều chỉnh khoản cần kiểm soát."
+                    onClick={() => navigate('/budget')}
                   />
                 </div>
               </section>
@@ -214,6 +192,74 @@ export default function PersonalDashboard() {
       )}
     </main>
   );
+}
+
+function StatusLine({ narrative, nextAction }) {
+  return (
+    <AppCard className="flex flex-col gap-3 border border-white/5 bg-dark-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-2">
+        <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+        <p className="text-sm leading-relaxed text-gray-300">{narrative.shortStatus}</p>
+      </div>
+      <p className="shrink-0 text-xs font-medium text-gray-500">
+        {nextAction ? 'Việc nên xem trước ở bên phải.' : 'Chưa cần hành động gấp.'}
+      </p>
+    </AppCard>
+  );
+}
+
+function PriorityPanel({ priorities }) {
+  return (
+    <AppCard className="border border-white/5 bg-dark-800 p-4">
+      <div className="mb-4 flex items-start gap-2">
+        <Bot className="mt-0.5 h-4 w-4 text-purple-300" />
+        <div>
+          <h2 className="text-sm font-semibold text-white">Việc cần chú ý</h2>
+          <p className="mt-1 text-xs leading-relaxed text-gray-500">
+            Tối đa ba điểm nên xem trước hôm nay.
+          </p>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {priorities.length === 0 ? (
+          <EmptyState
+            icon={CheckCircle}
+            title="Chưa có việc cần xử lý ngay"
+            description="Tình hình hiện tại đang đủ ổn để bạn tiếp tục theo dõi nhẹ nhàng."
+            color="emerald"
+            compact
+          />
+        ) : (
+          priorities.map((recommendation) => (
+            <RecommendationCard key={recommendation.id} recommendation={recommendation} compact />
+          ))
+        )}
+      </div>
+    </AppCard>
+  );
+}
+
+function BudgetHealthSummary({ status, onOpenBudget }) {
+  if (!status?.hasData || status.budgets.length === 0) {
+    return (
+      <AppCard className="border border-white/5 bg-dark-800 p-5">
+        <div className="flex items-start gap-2">
+          <PiggyBank className="mt-0.5 h-4 w-4 text-emerald-400" />
+          <div>
+            <h3 className="text-sm font-semibold text-white">Ngân sách tháng này</h3>
+            <p className="mt-1 text-xs leading-relaxed text-gray-500">
+              Chưa có hạn mức để đối chiếu. Bạn có thể thêm ngân sách khi muốn theo dõi kỹ hơn.
+            </p>
+          </div>
+        </div>
+        <AppButton size="sm" variant="secondary" onClick={onOpenBudget} icon={ArrowRight} className="mt-4">
+          Mở ngân sách
+        </AppButton>
+      </AppCard>
+    );
+  }
+
+  return <BudgetStatusCard status={status} />;
 }
 
 function DeepLinkCard({ icon: Icon, title, description, onClick }) {
@@ -257,8 +303,9 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
   if (topRecommendation?.severity === 'critical') {
     return {
       eyebrow: 'Cần chú ý',
-      headline: 'Có một tín hiệu tài chính nên xử lý sớm.',
+      headline: 'Có một việc nên được xem trước hôm nay.',
       guidance: topRecommendation.description,
+      shortStatus: 'Có một ưu tiên rõ ràng. Xem mục “Việc cần chú ý” trước khi đi sâu vào các trang khác.',
     };
   }
 
@@ -267,6 +314,7 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
       eyebrow: 'Ngân sách',
       headline: 'Một vài hạn mức đang cần được xem lại.',
       guidance: `${overBudgetCount} ngân sách đã vượt hạn mức trong tháng này.`,
+      shortStatus: 'Ưu tiên hiện tại là kiểm tra ngân sách đang vượt hạn mức.',
     };
   }
 
@@ -275,6 +323,7 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
       eyebrow: 'Nhịp chi tiêu',
       headline: 'Chi tiêu đang tăng nhanh hơn bình thường.',
       guidance: topRecommendation.description,
+      shortStatus: 'Nhịp chi đang cao hơn mong muốn. Kiểm tra dự báo nếu bạn cần quyết định nhanh.',
     };
   }
 
@@ -282,7 +331,8 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
     return {
       eyebrow: 'Ổn định hơn',
       headline: 'Nhịp chi gần đây đang đều hơn trước.',
-      guidance: 'Zyra thấy tín hiệu này từ dữ liệu theo thời gian, không phải từ một giao dịch riêng lẻ.',
+      guidance: 'Dữ liệu gần đây cho thấy nhịp chi đang bớt dao động.',
+      shortStatus: 'Tình hình đang ổn hơn. Tiếp tục theo dõi các khoản chi mới trong tuần này.',
     };
   }
 
@@ -291,6 +341,7 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
       eyebrow: 'So với tháng trước',
       headline: 'Chi tiêu gần đây đang nhẹ hơn giai đoạn trước.',
       guidance: 'Bạn có thể tiếp tục giữ nhịp hiện tại nếu nó phù hợp với kế hoạch tháng này.',
+      shortStatus: 'Chi tiêu đang nhẹ hơn. Đây là thời điểm tốt để giữ nhịp thay vì đổi nhiều thứ.',
     };
   }
 
@@ -298,15 +349,17 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
     return {
       eyebrow: 'Theo chu kỳ',
       headline: 'Cuối tuần vẫn là thời điểm chi tiêu cao hơn.',
-      guidance: 'Đây là nhịp lặp từ dữ liệu chi tiêu, hữu ích khi bạn muốn lên kế hoạch trước.',
+      guidance: 'Mẫu chi này hữu ích khi bạn muốn chuẩn bị trước cho vài ngày tới.',
+      shortStatus: 'Nếu sắp đến cuối tuần, nên xem lại các khoản dự kiến trước.',
     };
   }
 
   if (atRiskCount > 0) {
     return {
       eyebrow: 'Dự báo',
-      headline: 'Bạn vẫn đang kiểm soát được tháng này, nhưng có rủi ro phía trước.',
+      headline: 'Tháng này vẫn trong tầm kiểm soát, nhưng có rủi ro phía trước.',
       guidance: `${atRiskCount} ngân sách có thể cần điều chỉnh nếu nhịp chi hiện tại tiếp tục.`,
+      shortStatus: 'Chưa cần phản ứng mạnh, nhưng nên xem dự báo trước khi chi thêm khoản lớn.',
     };
   }
 
@@ -315,12 +368,14 @@ function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
       eyebrow: 'Công nợ',
       headline: 'Bạn đang có công nợ ròng cần theo dõi.',
       guidance: 'Các khoản thanh toán vẫn trong tầm kiểm soát, nhưng nên được xử lý theo thứ tự ưu tiên.',
+      shortStatus: 'Điểm cần xem là khoản bạn đang nợ. Ưu tiên xử lý các khoản lớn trước.',
     };
   }
 
   return {
     eyebrow: 'Tổng quan tháng này',
     headline: 'Tình hình tài chính tháng này đang ổn.',
-    guidance: 'Chi tiêu, ngân sách và công nợ hiện chưa cho thấy tín hiệu bất thường đáng kể.',
+    guidance: 'Chi tiêu, ngân sách và công nợ hiện chưa có điểm bất thường đáng kể.',
+    shortStatus: 'Không có việc gấp. Bạn có thể xem nhanh danh mục, phòng và ngân sách bên dưới.',
   };
 }
