@@ -8,7 +8,7 @@ export default function TopBar({ onMenuClick, title, children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
-  const section = path.startsWith('/rooms/')
+  const section = path === '/rooms' || path.startsWith('/rooms/')
     ? 'Nhóm'
     : path.startsWith('/analytics') || path.startsWith('/forecasts') || path.startsWith('/budget') || path.startsWith('/insights')
       ? 'Tiền bạc'

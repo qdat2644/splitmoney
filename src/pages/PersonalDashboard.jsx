@@ -143,75 +143,71 @@ export default function PersonalDashboard() {
                 </div>
               </section>
 
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.75fr)]">
-                <div className="space-y-6">
-                  <section className="space-y-3">
-                    <SectionHeading
-                      icon={Bot}
-                      title="Việc cần chú ý"
-                      description="Những tín hiệu quan trọng nhất Zyra đang thấy trong dữ liệu hiện tại."
-                    />
-                    <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
-                      {topPriorities.length === 0 ? (
-                        <p className="text-sm text-gray-400">
-                          Chưa có cảnh báo đáng chú ý. Dòng tiền tháng này đang giữ nhịp ổn định.
-                        </p>
-                      ) : (
-                        topPriorities.map((recommendation) => (
-                          <RecommendationCard key={recommendation.id} recommendation={recommendation} compact />
-                        ))
-                      )}
-                    </AppCard>
-                  </section>
+              <section className="space-y-3">
+                <SectionHeading
+                  icon={Bot}
+                  title="Việc cần chú ý"
+                  description="Những tín hiệu quan trọng nhất Zyra đang thấy trong dữ liệu hiện tại."
+                />
+                <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
+                  {topPriorities.length === 0 ? (
+                    <p className="text-sm text-gray-400">
+                      Chưa có cảnh báo đáng chú ý. Dòng tiền tháng này đang giữ nhịp ổn định.
+                    </p>
+                  ) : (
+                    topPriorities.map((recommendation) => (
+                      <RecommendationCard key={recommendation.id} recommendation={recommendation} compact />
+                    ))
+                  )}
+                </AppCard>
+              </section>
 
-                  <section className="space-y-3">
-                    <SectionHeading
-                      title="Bức tranh tài chính"
-                      description="Phân bổ chi tiêu và nhịp vận động của các phòng."
-                    />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <CategoryBreakdown data={data.categoryBreakdown} />
-                      <RoomBreakdownList data={data.roomBreakdown} />
-                    </div>
-                  </section>
-
-                  <section className="space-y-3">
-                    <SectionHeading
-                      title="Hoạt động gần đây"
-                      description="Ngữ cảnh hỗ trợ cho những gì đang diễn ra, không phải trọng tâm chính."
-                    />
-                    <RecentExpensesList data={data.recentExpenses} />
-                  </section>
-
-                  <section className="space-y-3">
-                    <SectionHeading
-                      title="Đi sâu hơn"
-                      description="Mở đúng không gian khi bạn cần xem phân tích, dự báo hoặc trợ lý tài chính đầy đủ."
-                    />
-                    <BudgetStatusCard status={budgetStatus} />
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <DeepLinkCard
-                        icon={BarChart3}
-                        title="Xem phân tích chi tiết"
-                        description="Xu hướng, danh mục nổi bật và tín hiệu gần đây."
-                        onClick={() => navigate('/analytics')}
-                      />
-                      <DeepLinkCard
-                        icon={TrendingUp}
-                        title="Xem dự báo tháng này"
-                        description="Quỹ đạo cuối tháng, rủi ro ngân sách và khoản lặp lại."
-                        onClick={() => navigate('/forecasts')}
-                      />
-                      <DeepLinkCard
-                        icon={Bot}
-                        title="Mở Trợ lý AI"
-                        description="Ưu tiên, cơ hội và hồ sơ tài chính trong một không gian riêng."
-                        onClick={() => navigate('/copilot')}
-                      />
-                    </div>
-                  </section>
+              <section className="space-y-3">
+                <SectionHeading
+                  title="Bức tranh tài chính"
+                  description="Phân bổ chi tiêu và nhịp vận động của các phòng."
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CategoryBreakdown data={data.categoryBreakdown} />
+                  <RoomBreakdownList data={data.roomBreakdown} />
                 </div>
-              </div>
+              </section>
+
+              <section className="space-y-3">
+                <SectionHeading
+                  title="Hoạt động gần đây"
+                  description="Ngữ cảnh hỗ trợ cho những gì đang diễn ra, không phải trọng tâm chính."
+                />
+                <RecentExpensesList data={data.recentExpenses} />
+              </section>
+
+              <section className="space-y-3">
+                <SectionHeading
+                  title="Đi sâu hơn"
+                  description="Mở đúng không gian khi bạn cần xem phân tích, dự báo hoặc trợ lý tài chính đầy đủ."
+                />
+                <BudgetStatusCard status={budgetStatus} />
+                <div className="grid gap-3 md:grid-cols-3">
+                  <DeepLinkCard
+                    icon={BarChart3}
+                    title="Xem phân tích chi tiết"
+                    description="Xu hướng, danh mục nổi bật và tín hiệu gần đây."
+                    onClick={() => navigate('/analytics')}
+                  />
+                  <DeepLinkCard
+                    icon={TrendingUp}
+                    title="Xem dự báo tháng này"
+                    description="Quỹ đạo cuối tháng, rủi ro ngân sách và khoản lặp lại."
+                    onClick={() => navigate('/forecasts')}
+                  />
+                  <DeepLinkCard
+                    icon={Bot}
+                    title="Mở Trợ lý AI"
+                    description="Ưu tiên, cơ hội và hồ sơ tài chính trong một không gian riêng."
+                    onClick={() => navigate('/copilot')}
+                  />
+                </div>
+              </section>
             </div>
           )}
         </>
