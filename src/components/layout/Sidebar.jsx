@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, ArrowLeftRight, BarChart3, Bot, DoorOpen, House,
-  LayoutDashboard, Map, PiggyBank, Receipt, Settings, Sparkles,
+  LayoutDashboard, Map, PiggyBank, Settings,
   TrendingUp, Users, Wallet, X, Shield,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -66,12 +66,17 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
 
   const globalSections = [
     {
-      title: 'Cá nhân',
+      title: 'Tổng quan',
       items: [
         { to: '/', icon: House, label: 'Tổng quan', exact: true },
-        { to: '/insights', icon: Sparkles, label: 'Phân tích' },
+      ],
+    },
+    {
+      title: 'Tiền bạc',
+      items: [
+        { to: '/analytics', icon: BarChart3, label: 'Phân tích' },
+        { to: '/forecasts', icon: TrendingUp, label: 'Dự báo' },
         { to: '/budget', icon: PiggyBank, label: 'Ngân sách' },
-        { to: '/plans', icon: Map, label: 'Kế hoạch' },
       ],
     },
     {
@@ -81,10 +86,15 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
       ],
     },
     {
+      title: 'Kế hoạch',
+      items: [
+        { to: '/plans', icon: Map, label: 'Kế hoạch' },
+      ],
+    },
+    {
       title: 'AI',
       items: [
         { to: '/copilot', icon: Bot, label: 'Trợ lý AI' },
-        { to: '/forecasts', icon: TrendingUp, label: 'Dự báo' },
       ],
     },
     {

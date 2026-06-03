@@ -18,6 +18,7 @@ import ToastContainer from './components/ui/Toast';
 
 const PlansPage = lazy(() => import('./pages/PlansPage'));
 const BudgetPage = lazy(() => import('./pages/BudgetPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const AICopilotPage = lazy(() => import('./pages/AICopilotPage'));
 const ForecastsPage = lazy(() => import('./pages/ForecastsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -142,7 +143,8 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/" element={<AppShell mode="global" topBarTitle="Tổng quan"><PersonalDashboard /></AppShell>} />
-      <Route path="/insights" element={<AppShell mode="global" topBarTitle="Phân tích"><Suspense fallback={<PageFallback />}><AICopilotPage /></Suspense></AppShell>} />
+      <Route path="/insights" element={<Navigate to="/analytics" replace />} />
+      <Route path="/analytics" element={<AppShell mode="global" topBarTitle="Phân tích"><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AppShell>} />
       <Route path="/rooms" element={<AppShell mode="global" topBarTitle="Phòng"><RoomList /></AppShell>} />
       <Route path="/plans" element={<AppShell mode="global" topBarTitle="Kế hoạch"><Suspense fallback={<PageFallback />}><PlansPage /></Suspense></AppShell>} />
       <Route path="/budget" element={<AppShell mode="global" topBarTitle="Ngân sách"><Suspense fallback={<PageFallback />}><BudgetPage /></Suspense></AppShell>} />

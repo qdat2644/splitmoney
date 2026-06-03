@@ -7,11 +7,18 @@ export default function TopBar({ onMenuClick, title, children }) {
   const { theme, toggleTheme } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const section = location.pathname.startsWith('/rooms/')
+  const path = location.pathname;
+  const section = path.startsWith('/rooms/')
     ? 'Nhóm'
-    : location.pathname.startsWith('/copilot') || location.pathname.startsWith('/forecasts') || location.pathname.startsWith('/insights')
-      ? 'AI'
-      : 'Cá nhân';
+    : path.startsWith('/analytics') || path.startsWith('/forecasts') || path.startsWith('/budget') || path.startsWith('/insights')
+      ? 'Tiền bạc'
+      : path.startsWith('/plans')
+        ? 'Kế hoạch'
+        : path.startsWith('/copilot')
+          ? 'AI'
+          : path.startsWith('/settings') || path.startsWith('/admin')
+            ? 'Hệ thống'
+            : 'Tổng quan';
 
   return (
     <header className="sticky top-0 z-30 flex h-12 items-center gap-3.5 border-b border-white/5 bg-dark-950 px-4 sm:px-6">

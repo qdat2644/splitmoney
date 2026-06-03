@@ -5,20 +5,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
+  BarChart3,
   Bot,
   CalendarDays,
   DoorOpen,
-  PiggyBank,
   Plus,
   RefreshCw,
-  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { useBudgets } from '../hooks/useBudgets';
 import { useCopilotWorkspace } from '../hooks/useCopilotWorkspace';
 import { formatCurrency } from '../utils/formatters';
-import { compareRecommendationPriority, dedupeRecommendations, excludeSimilarRecommendations } from '../utils/recommendationDedupe';
+import { compareRecommendationPriority, dedupeRecommendations } from '../utils/recommendationDedupe';
 import { exportApi } from '../services/apiClient';
 
 import NetBalanceHero from '../components/personal/NetBalanceHero';
@@ -26,38 +26,14 @@ import SummaryCard from '../components/personal/SummaryCard';
 import CategoryBreakdown from '../components/personal/CategoryBreakdown';
 import RoomBreakdownList from '../components/personal/RoomBreakdownList';
 import RecentExpensesList from '../components/personal/RecentExpensesList';
-import MonthlyTrendChart from '../components/personal/MonthlyTrendChart';
 import DashboardSkeleton from '../components/personal/DashboardSkeleton';
-import InsightsSection from '../components/personal/InsightsSection';
 import BudgetStatusCard from '../components/personal/BudgetStatusCard';
-import MonthlyComparisonCard from '../components/personal/MonthlyComparisonCard';
 import ExportButton from '../components/ui/ExportButton';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
-import AnalyticsDashboard from '../components/personal/AnalyticsDashboard';
 import RecommendationCard from '../components/copilot/RecommendationCard';
-
-const categoryLabels = {
-  food: 'ăn uống',
-  drinks: 'đồ uống',
-  transport: 'di chuyển',
-  housing: 'lưu trú',
-  accommodation: 'lưu trú',
-  entertainment: 'giải trí',
-  shopping: 'mua sắm',
-  other: 'khác',
-};
-const memoryLabels = {
-  frugal: 'tiết chế',
-  balanced: 'cân bằng',
-  comfort: 'thoải mái',
-  low: 'thấp',
-  moderate: 'vừa',
-  medium: 'vừa',
-  high: 'cao',
-};
 
 export default function PersonalDashboard() {
   const { user } = useAuth();
@@ -69,8 +45,6 @@ export default function PersonalDashboard() {
 
   // Slice the consolidated payload into named sections used by each sub-component.
   const data     = dashboardData?.summary   ?? null;   // shape identical to old /me/summary
-  const analytics = dashboardData?.analytics ?? null;  // shape identical to old /me/analytics
-  const insights  = dashboardData?.insights  ?? null;  // shape identical to old /me/insights
 
   const { status: budgetStatus } = useBudgets();
   const { data: copilotData } = useCopilotWorkspace();
@@ -84,13 +58,6 @@ export default function PersonalDashboard() {
   const topPriorities = useMemo(
     () => [...uniqueRecommendations].sort(compareRecommendationPriority).slice(0, 4),
     [uniqueRecommendations],
-  );
-  const topOpportunities = useMemo(
-    () => excludeSimilarRecommendations(
-      dedupeRecommendations(copilotData?.opportunities ?? []),
-      topPriorities,
-    ).slice(0, 2),
-    [copilotData?.opportunities, topPriorities],
   );
 
   const narrative = buildPersonalNarrative({ data, copilotData, budgetStatus });
@@ -199,25 +166,6 @@ export default function PersonalDashboard() {
 
                   <section className="space-y-3">
                     <SectionHeading
-                      icon={Sparkles}
-                      title="Cơ hội"
-                      description="Các hướng tối ưu nhẹ nhàng, không phán xét và có thể hành động."
-                    />
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {topOpportunities.length === 0 ? (
-                        <AppCard className="border border-white/5 bg-dark-800 p-4 text-sm text-gray-400 md:col-span-2">
-                          Chưa có cơ hội tối ưu đủ rõ ràng. Khi có thêm dữ liệu, Zyra sẽ đề xuất điểm cải thiện phù hợp hơn.
-                        </AppCard>
-                      ) : (
-                        topOpportunities.map((recommendation) => (
-                          <RecommendationCard key={recommendation.id} recommendation={recommendation} compact />
-                        ))
-                      )}
-                    </div>
-                  </section>
-
-                  <section className="space-y-3">
-                    <SectionHeading
                       title="Bức tranh tài chính"
                       description="Phân bổ chi tiêu và nhịp vận động của các phòng."
                     />
@@ -232,48 +180,62 @@ export default function PersonalDashboard() {
                       title="Hoạt động gần đây"
                       description="Ngữ cảnh hỗ trợ cho những gì đang diễn ra, không phải trọng tâm chính."
                     />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <RecentExpensesList data={data.recentExpenses} />
-                      <MonthlyTrendChart data={data.monthlyTrend} />
-                    </div>
-                    <MonthlyComparisonCard monthlyTrend={data.monthlyTrend} />
+                    <RecentExpensesList data={data.recentExpenses} />
                   </section>
 
                   <section className="space-y-3">
                     <SectionHeading
-                      title="Phân tích chi tiết"
-                      description="Độ sâu cho những lúc bạn cần kiểm tra kỹ hơn."
+                      title="Đi sâu hơn"
+                      description="Mở đúng không gian khi bạn cần xem phân tích, dự báo hoặc trợ lý tài chính đầy đủ."
                     />
                     <BudgetStatusCard status={budgetStatus} />
-                    {/* Pass the pre-fetched analytics slice — AnalyticsDashboard skips its own fetch */}
-                    <AnalyticsDashboard data={analytics} />
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <DeepLinkCard
+                        icon={BarChart3}
+                        title="Xem phân tích chi tiết"
+                        description="Xu hướng, danh mục nổi bật và tín hiệu gần đây."
+                        onClick={() => navigate('/analytics')}
+                      />
+                      <DeepLinkCard
+                        icon={TrendingUp}
+                        title="Xem dự báo tháng này"
+                        description="Quỹ đạo cuối tháng, rủi ro ngân sách và khoản lặp lại."
+                        onClick={() => navigate('/forecasts')}
+                      />
+                      <DeepLinkCard
+                        icon={Bot}
+                        title="Mở Trợ lý AI"
+                        description="Ưu tiên, cơ hội và hồ sơ tài chính trong một không gian riêng."
+                        onClick={() => navigate('/copilot')}
+                      />
+                    </div>
                   </section>
                 </div>
-
-                <aside className="space-y-4">
-                  <ForecastSnapshot data={copilotData} />
-                  <FinancialMemory data={copilotData} />
-                  {/* Pass the pre-fetched insights slice — InsightsSection skips its own fetch */}
-                  <InsightsSection data={insights} />
-                  <AppCard className="space-y-3 border border-white/5 bg-dark-800 p-4">
-                    <div className="flex items-center gap-2">
-                      <PiggyBank className="h-4 w-4 text-emerald-400" />
-                      <p className="text-sm font-semibold text-white">Điều chỉnh tiếp theo</p>
-                    </div>
-                    <p className="text-sm leading-relaxed text-gray-400">
-                      Mở trợ lý AI để xem toàn bộ bức tranh dự báo, ngân sách và kế hoạch đang hoạt động.
-                    </p>
-                    <AppButton size="sm" onClick={() => navigate('/copilot')} icon={ArrowRight} className="w-full">
-                      Mở trợ lý AI
-                    </AppButton>
-                  </AppCard>
-                </aside>
               </div>
             </div>
           )}
         </>
       )}
     </main>
+  );
+}
+
+function DeepLinkCard({ icon: Icon, title, description, onClick }) {
+  return (
+    <AppCard className="flex h-full flex-col justify-between border border-white/5 bg-dark-800 p-4">
+      <div className="space-y-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5">
+          <Icon className="h-4 w-4 text-gray-300" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-gray-500">{description}</p>
+        </div>
+      </div>
+      <AppButton size="sm" variant="secondary" onClick={onClick} icon={ArrowRight} className="mt-4 w-full">
+        Mở
+      </AppButton>
+    </AppCard>
   );
 }
 
@@ -287,86 +249,6 @@ function SectionHeading({ icon: Icon, title, description }) {
       {description && <p className="text-xs leading-relaxed text-gray-500">{description}</p>}
     </div>
   );
-}
-
-function ForecastSnapshot({ data }) {
-  const snapshot = data?.forecastSnapshot;
-  if (!snapshot) return null;
-
-  return (
-    <AppCard className="space-y-4 border border-white/5 bg-dark-800 p-4">
-      <div>
-        <p className="text-[11px] font-medium text-gray-500">Dự báo</p>
-        <h2 className="mt-1 text-sm font-semibold text-white">Nhịp tháng hiện tại</h2>
-      </div>
-      <div className="space-y-3">
-        <Metric label="Cuối tháng" value={formatCurrency(snapshot.forecastMonthTotal || 0, true)} />
-        <Metric label="Chi mỗi ngày" value={formatCurrency(snapshot.spendingVelocity?.dailyAverage || 0, true)} />
-        <Metric label="Ngân sách cần chú ý" value={`${snapshot.budgetHealth?.atRiskCount ?? 0}`} />
-      </div>
-    </AppCard>
-  );
-}
-
-function FinancialMemory({ data }) {
-  const memory = data?.financialMemory;
-  if (!memory) return null;
-
-  return (
-    <AppCard className="space-y-4 border border-white/5 bg-dark-800 p-4">
-      <div>
-        <p className="text-[11px] font-medium text-gray-500">Hồ sơ tài chính</p>
-        <h2 className="mt-1 text-sm font-semibold text-white">Điểm Zyra đang ghi nhớ</h2>
-      </div>
-      <div className="space-y-3">
-        <Metric label="Phong cách" value={formatMemoryValue(memory.spendingStyle?.type)} />
-        <Metric label="Biến động" value={formatMemoryValue(memory.volatility?.level)} />
-        <Metric label="Kỷ luật" value={formatMemoryValue(memory.budgetDiscipline?.level)} />
-        <Metric label="Theo thời gian" value={memory.recentTrendSummary?.label || 'chưa rõ'} />
-        <Metric label="Danh mục nổi bật" value={formatCategoryList(memory.topCategories)} />
-      </div>
-      <TemporalPills memory={memory} />
-    </AppCard>
-  );
-}
-
-function TemporalPills({ memory }) {
-  const pills = [
-    memory?.historicalComparisons?.monthOverMonth?.confidence >= 0.55 ? 'So với tháng trước' : null,
-    memory?.historicalComparisons?.rolling7DayTrend?.confidence >= 0.55 ? '7 ngày gần đây' : null,
-    memory?.recentTrendSummary?.type === 'stabilization' ? 'Ổn định hơn' : null,
-    memory?.worseningAreas?.length > 0 ? 'Tăng dần' : null,
-    memory?.recurringPatterns?.length > 0 ? 'Theo chu kỳ' : null,
-  ].filter(Boolean).slice(0, 4);
-
-  if (pills.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {pills.map((pill) => (
-        <span key={pill} className="rounded-full bg-white/5 px-2 py-1 text-[11px] text-gray-400">
-          {pill}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function Metric({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className="text-sm font-medium text-white">{value}</span>
-    </div>
-  );
-}
-
-function formatMemoryValue(value) {
-  return memoryLabels[value] ?? 'chưa rõ';
-}
-
-function formatCategoryList(categories = []) {
-  return categories.map((category) => categoryLabels[category] ?? category).join(', ') || 'chưa có';
 }
 
 function buildPersonalNarrative({ data, copilotData, budgetStatus }) {
