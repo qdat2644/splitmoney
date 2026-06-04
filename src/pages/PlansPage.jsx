@@ -51,420 +51,482 @@ const TRACKING_STATUS = {
   no_budget: { label: 'Chưa đặt ngân sách', className: 'text-gray-300 bg-white/5 border-white/10' },
 };
 
-// ── Plan Expense Row ─────────────────────────────────────────────────────────
-function PlanExpenseRow({ expense, onDelete, onConvert, onEdit }) {
-  const isConverted = !!expense.convertedToExpenseId;
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 8 }}
-      className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-colors
-        ${isConverted ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-white/5 bg-white/3 hover:bg-white/5'}`}
-    >
-      <div className="flex items-center gap-2.5 min-w-0">
-        <span className="text-base">{CATEGORY_ICONS[expense.category] ?? '📦'}</span>
-        <div className="min-w-0">
-          <p className={`text-sm font-medium truncate ${isConverted ? 'text-emerald-300 line-through opacity-70' : 'text-white'}`}>
-            {expense.title}
-          </p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-500">{formatCurrency(expense.estimatedAmount, true)}</span>
-            <span className="text-xs text-gray-600">·</span>
-            <span className="text-xs text-gray-500">{SPLIT_TYPE_LABELS[expense.splitType] ?? expense.splitType}</span>
-            {expense.notes && <span className="text-xs text-gray-600 truncate max-w-[120px]">{expense.notes}</span>}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {isConverted ? (
-          <span className="flex items-center gap-1 text-xs text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
-            <Link2 className="w-3 h-3" /> Đã đồng bộ
-          </span>
-        ) : (
-          <>
-            <button
-              onClick={() => onEdit(expense)}
-              className="btn-icon w-7 h-7 text-gray-400/70 hover:text-white hover:bg-white/10"
-              title="Chỉnh sửa"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onConvert(expense)}
-              className="btn-icon w-7 h-7 text-blue-400/60 hover:text-blue-400 hover:bg-blue-500/10"
-              title="Đồng bộ sang phòng"
-            >
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onDelete(expense.id)}
-              className="btn-icon w-7 h-7 text-red-400/50 hover:text-red-400 hover:bg-red-500/10"
-              title="Xoá"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// ── Plan Card ────────────────────────────────────────────────────────────────
-function PlanTrackingPanel({ tracking }) {
-  const safeTracking = tracking ?? buildFallbackTracking();
-  const referenceAmount = safeTracking.targetBudgetAmount ?? safeTracking.plannedTotal;
-  const rawPercent = safeTracking.progressPercent || 0;
-  const progressWidth = Math.min(100, Math.max(0, rawPercent));
-  const status = TRACKING_STATUS[safeTracking.status] ?? TRACKING_STATUS.no_budget;
-
-  const percentLabel = referenceAmount > 0
-    ? rawPercent > 100
-      ? `${Math.round(rawPercent)}%`
-      : `${Math.round(rawPercent)}%`
-    : null;
-
-  const percentColor = safeTracking.status === 'over_budget'
-    ? 'text-red-400'
-    : safeTracking.status === 'near_limit'
-      ? 'text-amber-400'
-      : 'text-emerald-400';
-
-  return (
-    <AppCard variant="ghost" className="mx-4 mb-4 p-3">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-[11px] font-medium text-gray-500">Theo dõi ngân sách</p>
-            <p className="text-xs text-gray-400">{formatTrackingVariance(safeTracking)}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {percentLabel && (
-              <span className={`text-sm font-bold tabular-nums ${percentColor}`}>
-                {safeTracking.status === 'over_budget' ? '⚠ ' : ''}{percentLabel}
-              </span>
-            )}
-            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${status.className}`}>
-              {status.label}
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <Metric label={safeTracking.targetBudgetAmount == null ? 'Dự kiến' : 'Ngân sách'} value={formatCurrency(referenceAmount, true)} />
-          <Metric label="Thực tế" value={formatCurrency(safeTracking.actualTotal, true)} />
-          <Metric label="Còn lại" value={formatCurrency(safeTracking.remainingAmount, true)} tone={safeTracking.remainingAmount < 0 ? 'text-red-300' : 'text-emerald-300'} />
-        </div>
-
-        {/* Progress bar — label shows Tiến độ ngân sách */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-medium text-gray-500">Tiến độ ngân sách</p>
-            {percentLabel && (
-              <p className={`text-[10px] font-semibold tabular-nums ${percentColor}`}>{percentLabel}</p>
-            )}
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${safeTracking.status === 'over_budget' ? 'bg-red-400' : safeTracking.status === 'near_limit' ? 'bg-amber-400' : 'bg-emerald-400'}`}
-              style={{ width: `${progressWidth}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    </AppCard>
-  );
-}
-
-
-function Metric({ label, value, tone = 'text-white' }) {
-  return (
-    <div className="min-w-0 rounded-lg bg-black/10 px-2 py-2">
-      <p className="truncate text-[11px] text-gray-500">{label}</p>
-      <p className={`truncate text-sm font-semibold ${tone}`}>{value}</p>
-    </div>
-  );
-}
-
-function PlanVarianceTable({ tracking }) {
-  const rows = tracking?.itemBreakdown?.length ? tracking.itemBreakdown : tracking?.categoryBreakdown ?? [];
-  if (!rows.length) return null;
-
-  return (
-    <div className="overflow-x-auto rounded-lg border border-white/5">
-      <table className="min-w-full text-left text-xs">
-        <thead className="bg-white/5 text-gray-500">
-          <tr>
-            <th className="px-3 py-2 font-medium">Hạng mục</th>
-            <th className="px-3 py-2 font-medium">Dự kiến</th>
-            <th className="px-3 py-2 font-medium">Thực tế</th>
-            <th className="px-3 py-2 font-medium">Chênh lệch</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {rows.map((row) => (
-            <tr key={row.id ?? row.category}>
-              <td className="px-3 py-2 text-gray-300">{row.title ?? row.category}</td>
-              <td className="px-3 py-2 text-gray-400">{formatCurrency(row.plannedAmount, true)}</td>
-              <td className="px-3 py-2 text-gray-400">{formatCurrency(row.actualAmount, true)}</td>
-              <td className={`px-3 py-2 font-medium ${row.varianceAmount > 0 ? 'text-red-300' : row.varianceAmount < 0 ? 'text-emerald-300' : 'text-gray-400'}`}>
-                {formatCurrency(row.varianceAmount, true)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function buildFallbackTracking() {
   return {
-    targetBudgetAmount: null,
-    plannedTotal: 0,
-    actualTotal: 0,
-    remainingAmount: 0,
-    progressPercent: 0,
-    status: 'no_budget',
-    varianceAmount: 0,
-    itemBreakdown: [],
-    categoryBreakdown: [],
-    spendingCount: 0,
+    targetBudgetAmount: null, plannedTotal: 0, actualTotal: 0,
+    remainingAmount: 0, progressPercent: 0, status: 'no_budget',
+    varianceAmount: 0, itemBreakdown: [], categoryBreakdown: [], spendingCount: 0,
   };
 }
 
 function formatTrackingVariance(tracking) {
   if (!tracking.actualTotal) return 'Chưa có chi tiêu thực tế';
-  if (tracking.varianceAmount > 0) return `Vượt ngân sách ${formatCurrency(tracking.varianceAmount, true)}`;
+  if (tracking.varianceAmount > 0) return `Vượt ${formatCurrency(tracking.varianceAmount, true)}`;
   if (tracking.varianceAmount < 0) return `Còn lại ${formatCurrency(Math.abs(tracking.varianceAmount), true)}`;
   return 'Đúng ngân sách';
 }
 
-function PlanSpendingRow({ spending, expenses, onEdit, onDelete }) {
-  const linkedExpense = expenses.find((expense) => expense.id === spending.linkedPlanExpenseId);
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 8 }}
-      className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-white/5 bg-emerald-500/5"
-    >
-      <div className="flex items-center gap-2.5 min-w-0">
-        <span className="text-base">{CATEGORY_ICONS[spending.category] ?? CATEGORY_ICONS.other}</span>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-white truncate">{spending.title}</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-emerald-300">{formatCurrency(spending.amount, true)}</span>
-            {spending.category && <span className="text-xs text-gray-500">{spending.category}</span>}
-            {spending.spentAt && <span className="text-xs text-gray-500">{new Date(spending.spentAt).toLocaleDateString('vi-VN')}</span>}
-            {linkedExpense && <span className="text-xs text-blue-300 truncate max-w-[160px]">Gắn với {linkedExpense.title}</span>}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          onClick={() => onEdit(spending)}
-          className="btn-icon w-7 h-7 text-gray-400/70 hover:text-white hover:bg-white/10"
-          title="Chỉnh sửa chi tiêu"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => onDelete(spending.id)}
-          className="btn-icon w-7 h-7 text-red-400/50 hover:text-red-400 hover:bg-red-500/10"
-          title="Xoá chi tiêu"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-function PlanSpendingSection({ plan, onAdd, onEdit, onDelete }) {
-  const spendings = plan.spendings ?? [];
-  const expenses = plan.expenses ?? [];
-
-  return (
-    <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.03] p-3 space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h4 className="text-sm font-semibold text-white">Chi tiêu thực tế</h4>
-          <p className="text-xs text-gray-500">{spendings.length} khoản đã ghi nhận trong kế hoạch</p>
-        </div>
-        <AppButton size="sm" variant="secondary" icon={Plus} onClick={() => onAdd(plan.id)}>
-          Thêm chi tiêu thực tế
-        </AppButton>
-      </div>
-
-      {spendings.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-white/10 px-3 py-3 text-xs text-gray-500">
-          Chưa có chi tiêu thực tế. Khi chuyến đi bắt đầu, hãy ghi lại khoản chi tại đây để so sánh với kế hoạch.
-        </p>
-      ) : (
-        <AnimatePresence mode="popLayout">
-          {spendings.map((spending) => (
-            <PlanSpendingRow
-              key={spending.id}
-              spending={spending}
-              expenses={expenses}
-              onEdit={(item) => onEdit(plan.id, item)}
-              onDelete={(id) => onDelete(plan.id, id)}
-            />
-          ))}
-        </AnimatePresence>
-      )}
-    </div>
-  );
-}
-
-function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense, onDeleteExpense, onConvertExpense, onEditPlan, onAddSpending, onEditSpending, onDeleteSpending }) {
-  const [expanded, setExpanded] = useState(false);
-  const Icon = PLAN_STATUS_ICONS[plan.status] ?? Clock;
-  const expenses = plan.expenses ?? [];
-  const participantCount = plan.participants?.length ?? 0;
-  const costPerPerson = participantCount > 0 ? plan.estimatedTotal / participantCount : 0;
+// ── SummaryBar ─────────────────────────────────────────────────────────────────
+// Always-visible top section of a plan card. Target height 150-220px.
+function SummaryBar({ plan, onStatusChange, onEditPlan, onDelete, expanded, onToggle }) {
   const tracking = plan.tracking ?? buildFallbackTracking();
+  const Icon = PLAN_STATUS_ICONS[plan.status] ?? Clock;
+  const referenceAmount = tracking.targetBudgetAmount ?? tracking.plannedTotal;
+  const rawPercent = tracking.progressPercent || 0;
+  const progressWidth = Math.min(100, Math.max(0, rawPercent));
+  const status = TRACKING_STATUS[tracking.status] ?? TRACKING_STATUS.no_budget;
+  const isOverBudget = tracking.status === 'over_budget';
+  const isNearLimit = tracking.status === 'near_limit';
+  const percentColor = isOverBudget ? 'text-red-400' : isNearLimit ? 'text-amber-400' : 'text-emerald-400';
+  const barColor = isOverBudget ? 'bg-red-400' : isNearLimit ? 'bg-amber-400' : 'bg-emerald-400';
+  const hasData = referenceAmount > 0;
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="glass-card border border-white/5 hover:border-white/10 transition-all overflow-hidden"
-    >
-      {/* Header */}
-      <div className="flex items-start gap-3 p-4">
+    <div className="p-4 space-y-3">
+      {/* Title row */}
+      <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-lg">{(PLAN_TYPES[plan.type] ?? '📋').split(' ')[0]}</span>
-            <h3 className="font-semibold text-white truncate">{plan.name}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${PLAN_STATUS_COLORS[plan.status]}`}>
+            <span className="text-xl leading-none">{(PLAN_TYPES[plan.type] ?? '📋').split(' ')[0]}</span>
+            <h3 className="font-semibold text-white text-base leading-tight truncate">{plan.name}</h3>
+            <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${PLAN_STATUS_COLORS[plan.status]}`}>
               <Icon className="w-3 h-3" />
               {plan.status}
             </span>
           </div>
-          {plan.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{plan.description}</p>}
-          <div className="flex items-center gap-4 mt-2 flex-wrap">
-            {plan.startDate && (
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {new Date(plan.startDate).toLocaleDateString('vi-VN')}
-                {plan.endDate && ` – ${new Date(plan.endDate).toLocaleDateString('vi-VN')}`}
-              </span>
-            )}
-            <span className="text-xs text-gray-400">{expenses.length} mục</span>
-            <span className="text-xs text-gray-400 flex items-center gap-1"><Users className="w-3 h-3" /> {participantCount}</span>
-            {plan.estimatedTotal > 0 && (
-              <span className="text-xs font-semibold text-blue-400">~{formatCurrency(plan.estimatedTotal, true)}</span>
-            )}
-            {costPerPerson > 0 && (
-              <span className="text-xs text-gray-400">{formatCurrency(costPerPerson, true)}/người</span>
-            )}
-          </div>
+          {plan.startDate && (
+            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {new Date(plan.startDate).toLocaleDateString('vi-VN')}
+              {plan.endDate && ` – ${new Date(plan.endDate).toLocaleDateString('vi-VN')}`}
+            </p>
+          )}
         </div>
 
+        {/* Controls */}
         <div className="flex items-center gap-1 shrink-0">
           <select
             value={plan.status}
             onChange={e => onStatusChange(plan.id, e.target.value)}
+            onClick={e => e.stopPropagation()}
             className="text-xs bg-white/5 border border-white/10 text-gray-300 rounded px-1.5 py-1 focus:outline-none"
           >
             {Object.keys(PLAN_STATUS_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button
-            onClick={() => onEditPlan(plan)}
-            className="btn-icon w-7 h-7 text-gray-400 hover:text-white"
-            title="Chỉnh sửa kế hoạch"
-          >
+          <button onClick={() => onEditPlan(plan)} className="btn-icon w-7 h-7" title="Sửa kế hoạch">
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="btn-icon w-7 h-7 text-gray-400 hover:text-white"
-            title={expanded ? 'Thu gọn' : 'Mở rộng'}
-          >
-            {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            onClick={() => onDelete(plan.id)}
-            className="btn-icon w-7 h-7 text-red-400/60 hover:text-red-400 hover:bg-red-500/10"
-            title="Xoá kế hoạch"
-          >
+          <button onClick={() => onDelete(plan.id)} className="btn-icon w-7 h-7 text-red-400/60 hover:text-red-400 hover:bg-red-500/10" title="Xoá">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      <PlanTrackingPanel tracking={tracking} />
+      {/* Budget metrics row */}
+      {hasData && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <p className="text-[10px] text-gray-500">{tracking.targetBudgetAmount != null ? 'Ngân sách' : 'Dự kiến'}</p>
+            <p className="text-sm font-semibold text-white tabular-nums">{formatCurrency(referenceAmount, true)}</p>
+          </div>
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <p className="text-[10px] text-gray-500">Đã tiêu</p>
+            <p className={`text-sm font-semibold tabular-nums ${isOverBudget ? 'text-red-300' : 'text-white'}`}>{formatCurrency(tracking.actualTotal, true)}</p>
+          </div>
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <p className="text-[10px] text-gray-500">Còn lại</p>
+            <p className={`text-sm font-semibold tabular-nums ${tracking.remainingAmount < 0 ? 'text-red-300' : 'text-emerald-300'}`}>{formatCurrency(tracking.remainingAmount, true)}</p>
+          </div>
+        </div>
+      )}
 
-      {/* Expanded expenses panel */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 border-t border-white/5 pt-3 space-y-2">
-              {/* Expense list */}
-              {expenses.length === 0 ? (
-                <p className="text-xs text-gray-500 text-center py-3">Chưa có mục kế hoạch nào</p>
-              ) : (
-                <AnimatePresence mode="popLayout">
-                  {expenses.map(exp => (
-                    <PlanExpenseRow
-                      key={exp.id}
-                      expense={exp}
-                      onEdit={(expense) => onEditExpense(plan.id, expense)}
-                      onDelete={(id) => onDeleteExpense(plan.id, id)}
-                      onConvert={(exp) => onConvertExpense(plan.id, exp)}
-                    />
-                  ))}
-                </AnimatePresence>
-              )}
-
-              {/* Totals */}
-              {expenses.length > 0 && (
-                <div className="flex items-center justify-between pt-1 border-t border-white/5 text-xs">
-                  <span className="text-gray-500">Ước tính tổng</span>
-                  <span className="text-blue-300 font-bold">{formatCurrency(plan.estimatedTotal, true)}</span>
-                </div>
-              )}
-
-              <PlanSpendingSection
-                plan={plan}
-                onAdd={onAddSpending}
-                onEdit={onEditSpending}
-                onDelete={onDeleteSpending}
-              />
-
-              <PlanVarianceTable tracking={tracking} />
-
-              {/* Add expense button */}
-              <button
-                onClick={() => onAddExpense(plan.id)}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-white/10 text-xs text-gray-400 hover:text-white hover:border-blue-500/40 hover:bg-blue-500/5 transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Thêm mục kế hoạch
-              </button>
+      {/* Progress bar */}
+      {hasData && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-32 sm:w-48 overflow-hidden rounded-full bg-white/8">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                  style={{ width: `${progressWidth}%` }}
+                />
+              </div>
+              <span className={`text-xs font-bold tabular-nums ${percentColor}`}>
+                {isOverBudget && '⚠ '}{Math.round(rawPercent)}%
+              </span>
             </div>
-          </motion.div>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${status.className}`}>
+              {status.label}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Expand toggle */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-center gap-1.5 pt-0.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+      >
+        {expanded ? (
+          <><ChevronDown className="w-3.5 h-3.5" />Thu gọn</>
+        ) : (
+          <><ChevronRight className="w-3.5 h-3.5" />Xem chi tiết</>
         )}
-      </AnimatePresence>
-    </motion.div>
+      </button>
+    </div>
   );
 }
 
+// ── Tab: Tổng quan ─────────────────────────────────────────────────────────────
+function OverviewTab({ plan }) {
+  const tracking = plan.tracking ?? buildFallbackTracking();
+  const referenceAmount = tracking.targetBudgetAmount ?? tracking.plannedTotal;
+  const expenses = plan.expenses ?? [];
+  const spendings = plan.spendings ?? [];
+  const convertedCount = expenses.filter(e => !!e.convertedToExpenseId).length;
+  const insights = [];
+
+  if (tracking.status === 'under_budget' && tracking.actualTotal > 0) insights.push({ icon: '✓', text: 'Đang trong ngân sách', color: 'text-emerald-400' });
+  if (tracking.status === 'near_limit') insights.push({ icon: '⚠', text: 'Gần chạm ngân sách — cần chú ý', color: 'text-amber-400' });
+  if (tracking.status === 'over_budget') insights.push({ icon: '✗', text: `Vượt ngân sách ${formatCurrency(Math.abs(tracking.varianceAmount), true)}`, color: 'text-red-400' });
+  if (tracking.remainingAmount > 0) insights.push({ icon: '✓', text: `${formatCurrency(tracking.remainingAmount, true)} còn lại`, color: 'text-gray-300' });
+  if (convertedCount > 0) insights.push({ icon: '✓', text: `${convertedCount} mục kế hoạch đã chuyển sang phòng`, color: 'text-blue-300' });
+  if (spendings.length > 0) insights.push({ icon: '✓', text: `${spendings.length} khoản chi thực tế đã ghi nhận`, color: 'text-gray-300' });
+  if (!tracking.actualTotal && !referenceAmount) insights.push({ icon: '→', text: 'Thêm mục dự kiến hoặc chi tiêu thực tế để bắt đầu theo dõi', color: 'text-gray-500' });
+
+  return (
+    <div className="space-y-4">
+      {/* Full progress bar */}
+      {referenceAmount > 0 && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>Tiến độ ngân sách</span>
+            <span className="font-medium">{formatCurrency(tracking.actualTotal, true)} / {formatCurrency(referenceAmount, true)}</span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-white/8">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${
+                tracking.status === 'over_budget' ? 'bg-red-400' :
+                tracking.status === 'near_limit' ? 'bg-amber-400' : 'bg-emerald-400'
+              }`}
+              style={{ width: `${Math.min(100, tracking.progressPercent || 0)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Insights */}
+      {insights.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Nhận xét</p>
+          {insights.map((ins, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className={`text-xs font-bold mt-0.5 ${ins.color}`}>{ins.icon}</span>
+              <span className={`text-sm ${ins.color}`}>{ins.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Participants */}
+      {(plan.participants?.length ?? 0) > 0 && (
+        <div>
+          <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">Người tham gia</p>
+          <div className="flex flex-wrap gap-1.5">
+            {plan.participants.map((p, i) => (
+              <span key={p.id ?? i} className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-gray-300">
+                {p.user?.name ?? p.guestMember?.displayName ?? p.displayName ?? 'Ẩn danh'}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tab: Dự kiến ───────────────────────────────────────────────────────────────
+function PlannedTab({ plan, onAddExpense, onEditExpense, onDeleteExpense, onConvertExpense }) {
+  const expenses = plan.expenses ?? [];
+  const spendings = plan.spendings ?? [];
+
+  // Count actual spendings linked to each planned item
+  const linkedCountById = {};
+  for (const s of spendings) {
+    if (s.linkedPlanExpenseId) linkedCountById[s.linkedPlanExpenseId] = (linkedCountById[s.linkedPlanExpenseId] || 0) + 1;
+  }
+  // Also count converted room expenses
+  for (const e of expenses) {
+    if (e.convertedToExpenseId && !linkedCountById[e.id]) linkedCountById[e.id] = 1;
+  }
+
+  return (
+    <div className="space-y-2">
+      {expenses.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-white/10 py-8 text-center">
+          <p className="text-xs text-gray-500 mb-3">Chưa có mục kế hoạch nào</p>
+          <button
+            onClick={() => onAddExpense(plan.id)}
+            className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Thêm mục đầu tiên
+          </button>
+        </div>
+      ) : (
+        <>
+          <div>
+            {expenses.map(expense => {
+              const isConverted = !!expense.convertedToExpenseId;
+              const linkedCount = linkedCountById[expense.id] || 0;
+              return (
+                <div
+                  key={expense.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors mb-1.5"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-base leading-none">{CATEGORY_ICONS[expense.category] ?? '📦'}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{expense.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        <span className="text-xs text-gray-400 font-semibold">{formatCurrency(expense.estimatedAmount, true)}</span>
+                        <span className="text-gray-600 text-xs">·</span>
+                        <span className="text-xs text-gray-500">{SPLIT_TYPE_LABELS[expense.splitType] ?? expense.splitType}</span>
+                        {linkedCount > 0 && !isConverted && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                            <CheckCircle className="w-3 h-3" />
+                            Có {linkedCount} khoản chi thực tế
+                          </span>
+                        )}
+                        {isConverted && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-blue-400">
+                            <CheckCircle className="w-3 h-3" />
+                            Đã ghi nhận chi tiêu
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!isConverted && (
+                      <>
+                        <button onClick={() => onEditExpense(plan.id, expense)} className="btn-icon w-7 h-7 text-gray-500 hover:text-white" title="Sửa">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => onConvertExpense(plan.id, expense)} className="btn-icon w-7 h-7 text-blue-400/60 hover:text-blue-400 hover:bg-blue-500/10" title="Chuyển sang phòng">
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => onDeleteExpense(plan.id, expense.id)} className="btn-icon w-7 h-7 text-red-400/50 hover:text-red-400 hover:bg-red-500/10" title="Xoá">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Total row */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+            <span className="text-gray-500">Tổng ước tính</span>
+            <span className="text-blue-300 font-bold">{formatCurrency(plan.estimatedTotal, true)}</span>
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={() => onAddExpense(plan.id)}
+        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-white/10 text-xs text-gray-400 hover:text-white hover:border-blue-500/40 hover:bg-blue-500/5 transition-all"
+      >
+        <Plus className="w-3.5 h-3.5" /> Thêm mục kế hoạch
+      </button>
+    </div>
+  );
+}
+
+// ── Tab: Thực tế ───────────────────────────────────────────────────────────────
+function ActualTab({ plan, onAddSpending, onEditSpending, onDeleteSpending }) {
+  const spendings = plan.spendings ?? [];
+  const expenses = plan.expenses ?? [];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-gray-500">{spendings.length} khoản chi đã ghi nhận</p>
+        <AppButton size="sm" variant="secondary" icon={Plus} onClick={() => onAddSpending(plan.id)}>
+          Thêm
+        </AppButton>
+      </div>
+
+      {spendings.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-white/10 py-8 text-center">
+          <p className="text-xs text-gray-500 mb-1">Chưa có chi tiêu thực tế</p>
+          <p className="text-[11px] text-gray-600">Khi có khoản chi phát sinh, hãy ghi lại để so sánh với kế hoạch.</p>
+        </div>
+      ) : (
+        <div>
+          {spendings.map(spending => {
+            const linkedExpense = expenses.find(e => e.id === spending.linkedPlanExpenseId);
+            return (
+              <div
+                key={spending.id}
+                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors mb-1.5"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-base leading-none">{CATEGORY_ICONS[spending.category] ?? CATEGORY_ICONS.other}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{spending.title}</p>
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                      <span className="text-xs font-semibold text-emerald-300">{formatCurrency(spending.amount, true)}</span>
+                      {spending.spentAt && <span className="text-xs text-gray-500">{new Date(spending.spentAt).toLocaleDateString('vi-VN')}</span>}
+                      {linkedExpense && (
+                        <span className="text-[11px] text-blue-400/80 truncate max-w-[140px]">
+                          → {linkedExpense.title}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => onEditSpending(plan.id, spending)} className="btn-icon w-7 h-7 text-gray-500 hover:text-white" title="Sửa">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => onDeleteSpending(plan.id, spending.id)} className="btn-icon w-7 h-7 text-red-400/50 hover:text-red-400 hover:bg-red-500/10" title="Xoá">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tab: Phân tích ─────────────────────────────────────────────────────────────
+function AnalysisTab({ plan }) {
+  const tracking = plan.tracking ?? buildFallbackTracking();
+  const rows = tracking.itemBreakdown?.length ? tracking.itemBreakdown : tracking.categoryBreakdown ?? [];
+
+  if (!rows.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-white/10 py-8 text-center">
+        <p className="text-xs text-gray-500">Chưa có dữ liệu phân tích.</p>
+        <p className="text-[11px] text-gray-600 mt-1">Thêm mục dự kiến và chi tiêu thực tế để xem phân tích.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {rows.map((row, i) => {
+        const isOver = row.varianceAmount > 0;
+        const isUnused = row.actualAmount === 0 && row.plannedAmount > 0;
+        const isOnTrack = !isOver && !isUnused && row.actualAmount > 0;
+
+        const statusDot = isOver ? '🔴' : isUnused ? '🟡' : '🟢';
+        const statusLabel = isOver ? 'Vượt ngân sách' : isUnused ? 'Chưa sử dụng' : 'Đúng kế hoạch';
+        const statusColor = isOver ? 'border-red-500/20 bg-red-500/5' : isUnused ? 'border-amber-500/20 bg-amber-500/5' : 'border-emerald-500/20 bg-emerald-500/5';
+        const labelColor = isOver ? 'text-red-400' : isUnused ? 'text-amber-400' : 'text-emerald-400';
+
+        return (
+          <div key={row.id ?? row.category ?? i} className={`rounded-lg border p-3 ${statusColor}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-sm">{statusDot}</span>
+                  <span className={`text-[11px] font-medium ${labelColor}`}>{statusLabel}</span>
+                </div>
+                <p className="text-sm font-medium text-white truncate">{row.title ?? row.category}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs text-gray-400">
+                  <span className={isOver ? 'text-red-300 font-semibold' : 'text-white'}>{formatCurrency(row.actualAmount, true)}</span>
+                  <span className="text-gray-600"> / </span>
+                  <span className="text-gray-400">{formatCurrency(row.plannedAmount, true)}</span>
+                </p>
+                {isOver && (
+                  <p className="text-[11px] text-red-400 font-semibold">+{formatCurrency(row.varianceAmount, true)}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── PlanCard ───────────────────────────────────────────────────────────────────
+const PLAN_TABS = ['Tổng quan', 'Dự kiến', 'Thực tế', 'Phân tích'];
+
+function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense, onDeleteExpense, onConvertExpense, onEditPlan, onAddSpending, onEditSpending, onDeleteSpending }) {
+  const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+
+  return (
+    <div className="glass-card border border-white/5 hover:border-white/10 transition-colors overflow-hidden">
+      {/* Level 1: Executive Summary */}
+      <SummaryBar
+        plan={plan}
+        onStatusChange={onStatusChange}
+        onEditPlan={onEditPlan}
+        onDelete={onDelete}
+        expanded={expanded}
+        onToggle={() => setExpanded(e => !e)}
+      />
+
+      {/* Level 2+3: Tabs + Detail */}
+      {expanded && (
+        <div className="border-t border-white/5">
+          {/* Tab bar */}
+          <div className="flex items-center gap-0 px-4 pt-3 overflow-x-auto">
+            {PLAN_TABS.map((tab, i) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(i)}
+                className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-colors mr-1 ${
+                  activeTab === i
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content — instant switch, no animation */}
+          <div className="px-4 py-4">
+            {activeTab === 0 && <OverviewTab plan={plan} />}
+            {activeTab === 1 && (
+              <PlannedTab
+                plan={plan}
+                onAddExpense={onAddExpense}
+                onEditExpense={onEditExpense}
+                onDeleteExpense={onDeleteExpense}
+                onConvertExpense={onConvertExpense}
+              />
+            )}
+            {activeTab === 2 && (
+              <ActualTab
+                plan={plan}
+                onAddSpending={onAddSpending}
+                onEditSpending={onEditSpending}
+                onDeleteSpending={onDeleteSpending}
+              />
+            )}
+            {activeTab === 3 && <AnalysisTab plan={plan} />}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Plan Spending Modal ────────────────────────────────────────────────────────
 function PlanSpendingModal({ plan, spending, onClose, onSave }) {
   const [linkedPlanExpenseId, setLinkedPlanExpenseId] = useState(spending?.linkedPlanExpenseId ?? '');
   const [title, setTitle] = useState(spending?.title ?? '');
