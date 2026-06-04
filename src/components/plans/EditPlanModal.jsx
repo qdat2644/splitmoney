@@ -23,6 +23,7 @@ export default function EditPlanModal({ plan, onClose, onSave }) {
     startDate: plan.startDate?.split('T')[0] ?? '',
     endDate: plan.endDate?.split('T')[0] ?? '',
     status: plan.status ?? 'draft',
+    targetBudgetAmount: plan.targetBudgetAmount ?? '',
   });
   const [participants, setParticipants] = useState((plan.participants ?? []).map((participant) => ({
     id: participant.userId || participant.guestMemberId,
@@ -61,6 +62,18 @@ export default function EditPlanModal({ plan, onClose, onSave }) {
           <div>
             <label className="text-xs text-gray-400 mb-1 block">Tên kế hoạch *</label>
             <input className="input-field" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Ngân sách mục tiêu</label>
+            <input
+              type="number"
+              min="0"
+              className="input-field"
+              value={form.targetBudgetAmount}
+              onChange={(event) => setForm((prev) => ({ ...prev, targetBudgetAmount: event.target.value }))}
+              placeholder="VD: 6000000"
+            />
+            <p className="mt-1 text-[11px] text-gray-500">Dùng để so sánh chi tiêu thực tế với kế hoạch.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

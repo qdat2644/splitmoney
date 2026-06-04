@@ -10,27 +10,27 @@ datasource db {
 // ── Core Models ───────────────────────────────────────────────────────────────
 
 model User {
-  id                    String                @id @default(uuid())
-  name                  String
-  email                 String                @unique
-  passwordHash          String
-  role                  String                @default("member") // "member" | "admin"
-  status                String                @default("active") // "active" | "suspended"
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("member") // "member" | "admin"
+  status       String   @default("active") // "active" | "suspended"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  roomsOwned            Room[]                @relation("RoomOwner")
+  roomsOwned            Room[]               @relation("RoomOwner")
   roomMemberships       RoomMember[]
-  expensesCreated       Expense[]             @relation("ExpenseCreator")
-  expensesPaid          Expense[]             @relation("ExpensePayer")
+  expensesCreated       Expense[]            @relation("ExpenseCreator")
+  expensesPaid          Expense[]            @relation("ExpensePayer")
   expenseParticipations ExpenseParticipant[]
   resetTokens           PasswordResetToken[]
-  guestsCreated         GuestMember[]         @relation("GuestCreator")
-  guestsClaimed         GuestMember[]         @relation("GuestClaimer")
-  paymentsFrom          Payment[]             @relation("PaymentFromUser")
-  paymentsTo            Payment[]             @relation("PaymentToUser")
-  paymentsCreated       Payment[]             @relation("PaymentCreator")
-  plansCreated          Plan[]                @relation("PlanCreator")
+  guestsCreated         GuestMember[]        @relation("GuestCreator")
+  guestsClaimed         GuestMember[]        @relation("GuestClaimer")
+  paymentsFrom          Payment[]            @relation("PaymentFromUser")
+  paymentsTo            Payment[]            @relation("PaymentToUser")
+  paymentsCreated       Payment[]            @relation("PaymentCreator")
+  plansCreated          Plan[]               @relation("PlanCreator")
   planParticipations    PlanParticipant[]
   budgets               Budget[]
   financialProfile      FinancialProfile?
@@ -54,14 +54,14 @@ model OperationalEvent {
 }
 
 model Room {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  code      String     @unique
+  code      String   @unique
   ownerId   String
-  status    String     @default("active") // "active" | "archived"
-  owner     User       @relation("RoomOwner", fields: [ownerId], references: [id])
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  status    String   @default("active") // "active" | "archived"
+  owner     User     @relation("RoomOwner", fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   members      RoomMember[]
   expenses     Expense[]
@@ -75,7 +75,7 @@ model RoomMember {
   id        String   @id @default(uuid())
   roomId    String
   userId    String
-  role      String   @default("member")  // "owner" | "member"
+  role      String   @default("member") // "owner" | "member"
   status    String   @default("pending") // "pending" | "approved" | "rejected"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -91,6 +91,8 @@ model RoomMember {
 model Expense {
   id                  String   @id @default(uuid())
   roomId              String
+  planId              String?
+  sourcePlanExpenseId String?
   title               String
   amount              Float
   category            String   @default("other")
@@ -103,23 +105,27 @@ model Expense {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  room          Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  paidByUser    User?        @relation("ExpensePayer", fields: [paidByUserId], references: [id])
-  paidByGuest   GuestMember? @relation("ExpenseGuestPayer", fields: [paidByGuestMemberId], references: [id])
-  createdByUser User         @relation("ExpenseCreator", fields: [createdByUserId], references: [id])
-  participants  ExpenseParticipant[]
+  room              Room                 @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  plan              Plan?                @relation("PlanActualExpenses", fields: [planId], references: [id], onDelete: SetNull)
+  sourcePlanExpense PlanExpense?         @relation("PlanExpenseActualExpenses", fields: [sourcePlanExpenseId], references: [id], onDelete: SetNull)
+  paidByUser        User?                @relation("ExpensePayer", fields: [paidByUserId], references: [id])
+  paidByGuest       GuestMember?         @relation("ExpenseGuestPayer", fields: [paidByGuestMemberId], references: [id])
+  createdByUser     User                 @relation("ExpenseCreator", fields: [createdByUserId], references: [id])
+  participants      ExpenseParticipant[]
 
   @@index([roomId, date])
+  @@index([planId])
+  @@index([sourcePlanExpenseId])
   @@index([createdByUserId])
   @@index([paidByUserId])
 }
 
 model ExpenseParticipant {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   expenseId     String
   userId        String?
   guestMemberId String?
-  shareAmount   Float    // canonical resolved share — always absolute VND
+  shareAmount   Float // canonical resolved share — always absolute VND
 
   expense     Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -149,15 +155,15 @@ model GuestMember {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  room          Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  createdByUser User         @relation("GuestCreator", fields: [createdByUserId], references: [id])
-  claimedByUser User?        @relation("GuestClaimer", fields: [claimedByUserId], references: [id])
+  room          Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdByUser User  @relation("GuestCreator", fields: [createdByUserId], references: [id])
+  claimedByUser User? @relation("GuestClaimer", fields: [claimedByUserId], references: [id])
 
-  expensesPaid          Expense[]              @relation("ExpenseGuestPayer")
+  expensesPaid          Expense[]            @relation("ExpenseGuestPayer")
   expenseParticipations ExpenseParticipant[]
   roomMembers           RoomMember[]
-  paymentsFrom          Payment[]              @relation("PaymentFromGuest")
-  paymentsTo            Payment[]              @relation("PaymentToGuest")
+  paymentsFrom          Payment[]            @relation("PaymentFromGuest")
+  paymentsTo            Payment[]            @relation("PaymentToGuest")
   planParticipations    PlanParticipant[]
 }
 
@@ -191,24 +197,26 @@ model Payment {
 // ── Planning Foundation ───────────────────────────────────────────────────────
 
 model Plan {
-  id              String    @id @default(uuid())
-  roomId          String?
-  name            String
-  description     String?
-  type            String    @default("custom") // "trip"|"party"|"event"|"moving"|"wedding"|"custom"
-  status          String    @default("draft")  // "draft"|"active"|"completed"|"archived"
-  estimatedTotal  Float     @default(0)
-  currency        String    @default("VND")
-  startDate       DateTime?
-  endDate         DateTime?
-  createdByUserId String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  roomId             String?
+  name               String
+  description        String?
+  type               String    @default("custom") // "trip"|"party"|"event"|"moving"|"wedding"|"custom"
+  status             String    @default("draft") // "draft"|"active"|"completed"|"archived"
+  estimatedTotal     Float     @default(0)
+  targetBudgetAmount Float?
+  currency           String    @default("VND")
+  startDate          DateTime?
+  endDate            DateTime?
+  createdByUserId    String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  room          Room?             @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  createdByUser User              @relation("PlanCreator", fields: [createdByUserId], references: [id])
-  participants  PlanParticipant[]
-  expenses      PlanExpense[]
+  room           Room?             @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  createdByUser  User              @relation("PlanCreator", fields: [createdByUserId], references: [id])
+  participants   PlanParticipant[]
+  expenses       PlanExpense[]
+  actualExpenses Expense[]         @relation("PlanActualExpenses")
 }
 
 model PlanParticipant {
@@ -227,20 +235,21 @@ model PlanParticipant {
 }
 
 model PlanExpense {
-  id                   String   @id @default(uuid())
+  id                   String  @id @default(uuid())
   planId               String
   title                String
   estimatedAmount      Float
-  category             String   @default("other")
-  splitType            String   @default("equal")
+  category             String  @default("other")
+  splitType            String  @default("equal")
   note                 String?
-  participants         String   // JSON-encoded array of { userId?, guestMemberId? }
-  convertedToExpenseId String?  // populated on Plan→Expense conversion
+  participants         String // JSON-encoded array of { userId?, guestMemberId? }
+  convertedToExpenseId String? // populated on Plan→Expense conversion
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan           Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  actualExpenses Expense[] @relation("PlanExpenseActualExpenses")
 }
 
 // ── Budget Tracking ───────────────────────────────────────────────────────────
@@ -249,9 +258,9 @@ model Budget {
   id        String   @id @default(uuid())
   userId    String
   roomId    String?
-  category  String?  // null = overall monthly budget
+  category  String? // null = overall monthly budget
   amount    Float
-  month     Int      // 1–12
+  month     Int // 1–12
   year      Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -268,25 +277,25 @@ model Budget {
 
 // 🧠 AI Intelligence 🧠
 model FinancialProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  profileData     String   // JSON-encoded string of the inferred profile
-  lastComputedAt  DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  profileData    String // JSON-encoded string of the inferred profile
+  lastComputedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // 📋 Audit Trail — Immutable admin action log
 model AuditTrail {
-  id          String   @id @default(uuid())
-  actorId     String   // admin who performed the action
-  actionType  String   // e.g. "user.suspend", "room.archive", "ai.recompute"
-  targetType  String   // "user" | "room" | "import" | "ai_profile"
-  targetId    String
-  metadata    String?  // JSON-encoded lightweight context
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  actorId    String // admin who performed the action
+  actionType String // e.g. "user.suspend", "room.archive", "ai.recompute"
+  targetType String // "user" | "room" | "import" | "ai_profile"
+  targetId   String
+  metadata   String? // JSON-encoded lightweight context
+  createdAt  DateTime @default(now())
 
   @@index([actorId, createdAt])
   @@index([targetType, targetId])

@@ -44,6 +44,13 @@ const CATEGORY_ICONS = {
   grocery: '🛒', entertainment: '🎮', other: '📦',
 };
 
+const TRACKING_STATUS = {
+  under_budget: { label: 'Trong ngân sách', className: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20' },
+  near_limit: { label: 'Gần chạm ngân sách', className: 'text-amber-300 bg-amber-500/10 border-amber-500/20' },
+  over_budget: { label: 'Vượt ngân sách', className: 'text-red-300 bg-red-500/10 border-red-500/20' },
+  no_budget: { label: 'Chưa đặt ngân sách', className: 'text-gray-300 bg-white/5 border-white/10' },
+};
+
 // ── Plan Expense Row ─────────────────────────────────────────────────────────
 function PlanExpenseRow({ expense, onDelete, onConvert, onEdit }) {
   const isConverted = !!expense.convertedToExpenseId;
@@ -107,12 +114,111 @@ function PlanExpenseRow({ expense, onDelete, onConvert, onEdit }) {
 }
 
 // ── Plan Card ────────────────────────────────────────────────────────────────
+function PlanTrackingPanel({ tracking }) {
+  const safeTracking = tracking ?? buildFallbackTracking();
+  const referenceAmount = safeTracking.targetBudgetAmount ?? safeTracking.plannedTotal;
+  const progressWidth = Math.min(100, Math.max(0, safeTracking.progressPercent || 0));
+  const status = TRACKING_STATUS[safeTracking.status] ?? TRACKING_STATUS.no_budget;
+
+  return (
+    <AppCard variant="ghost" className="mx-4 mb-4 p-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-medium text-gray-500">Theo dõi ngân sách</p>
+            <p className="text-xs text-gray-400">{formatTrackingVariance(safeTracking)}</p>
+          </div>
+          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${status.className}`}>
+            {status.label}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <Metric label={safeTracking.targetBudgetAmount == null ? 'Dự kiến' : 'Ngân sách'} value={formatCurrency(referenceAmount, true)} />
+          <Metric label="Thực tế" value={formatCurrency(safeTracking.actualTotal, true)} />
+          <Metric label="Còn lại" value={formatCurrency(safeTracking.remainingAmount, true)} tone={safeTracking.remainingAmount < 0 ? 'text-red-300' : 'text-emerald-300'} />
+        </div>
+
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
+          <div
+            className={`h-full rounded-full ${safeTracking.status === 'over_budget' ? 'bg-red-400' : safeTracking.status === 'near_limit' ? 'bg-amber-400' : 'bg-emerald-400'}`}
+            style={{ width: `${progressWidth}%` }}
+          />
+        </div>
+      </div>
+    </AppCard>
+  );
+}
+
+function Metric({ label, value, tone = 'text-white' }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-black/10 px-2 py-2">
+      <p className="truncate text-[11px] text-gray-500">{label}</p>
+      <p className={`truncate text-sm font-semibold ${tone}`}>{value}</p>
+    </div>
+  );
+}
+
+function PlanVarianceTable({ tracking }) {
+  const rows = tracking?.itemBreakdown?.length ? tracking.itemBreakdown : tracking?.categoryBreakdown ?? [];
+  if (!rows.length) return null;
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-white/5">
+      <table className="min-w-full text-left text-xs">
+        <thead className="bg-white/5 text-gray-500">
+          <tr>
+            <th className="px-3 py-2 font-medium">Hạng mục</th>
+            <th className="px-3 py-2 font-medium">Dự kiến</th>
+            <th className="px-3 py-2 font-medium">Thực tế</th>
+            <th className="px-3 py-2 font-medium">Chênh lệch</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/5">
+          {rows.map((row) => (
+            <tr key={row.id ?? row.category}>
+              <td className="px-3 py-2 text-gray-300">{row.title ?? row.category}</td>
+              <td className="px-3 py-2 text-gray-400">{formatCurrency(row.plannedAmount, true)}</td>
+              <td className="px-3 py-2 text-gray-400">{formatCurrency(row.actualAmount, true)}</td>
+              <td className={`px-3 py-2 font-medium ${row.varianceAmount > 0 ? 'text-red-300' : row.varianceAmount < 0 ? 'text-emerald-300' : 'text-gray-400'}`}>
+                {formatCurrency(row.varianceAmount, true)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function buildFallbackTracking() {
+  return {
+    targetBudgetAmount: null,
+    plannedTotal: 0,
+    actualTotal: 0,
+    remainingAmount: 0,
+    progressPercent: 0,
+    status: 'no_budget',
+    varianceAmount: 0,
+    itemBreakdown: [],
+    categoryBreakdown: [],
+  };
+}
+
+function formatTrackingVariance(tracking) {
+  if (!tracking.actualTotal) return 'Chưa có chi tiêu thực tế';
+  if (tracking.varianceAmount > 0) return `Vượt dự kiến ${formatCurrency(tracking.varianceAmount, true)}`;
+  if (tracking.varianceAmount < 0) return `Thấp hơn dự kiến ${formatCurrency(Math.abs(tracking.varianceAmount), true)}`;
+  return 'Đúng như dự kiến';
+}
+
 function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense, onDeleteExpense, onConvertExpense, onEditPlan }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = PLAN_STATUS_ICONS[plan.status] ?? Clock;
   const expenses = plan.expenses ?? [];
   const participantCount = plan.participants?.length ?? 0;
   const costPerPerson = participantCount > 0 ? plan.estimatedTotal / participantCount : 0;
+  const tracking = plan.tracking ?? buildFallbackTracking();
 
   return (
     <motion.div
@@ -185,6 +291,8 @@ function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense,
         </div>
       </div>
 
+      <PlanTrackingPanel tracking={tracking} />
+
       {/* Expanded expenses panel */}
       <AnimatePresence>
         {expanded && (
@@ -221,6 +329,8 @@ function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense,
                 </div>
               )}
 
+              <PlanVarianceTable tracking={tracking} />
+
               {/* Add expense button */}
               <button
                 onClick={() => onAddExpense(plan.id)}
@@ -247,6 +357,7 @@ function CreatePlanModal({ onClose, onCreate }) {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate]   = useState('');
   const [endDate, setEndDate]       = useState('');
+  const [targetBudgetAmount, setTargetBudgetAmount] = useState('');
   const [participants, setParticipants] = useState(currentUser ? [{ name: currentUser.name, type: 'user', id: currentUser.userId || currentUser.id }] : []);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState('');
@@ -261,6 +372,7 @@ function CreatePlanModal({ onClose, onCreate }) {
         name, type, description, 
         startDate: startDate || undefined, 
         endDate: endDate || undefined,
+        targetBudgetAmount: targetBudgetAmount || null,
         participants 
       });
       onClose();
@@ -295,6 +407,15 @@ function CreatePlanModal({ onClose, onCreate }) {
             onChange={e => setDescription(e.target.value)} 
             rows={2} 
             placeholder="Ghi chú..."
+          />
+          <AppInput
+            type="number"
+            min="0"
+            label="Ngân sách mục tiêu"
+            value={targetBudgetAmount}
+            onChange={e => setTargetBudgetAmount(e.target.value)}
+            placeholder="VD: 6000000"
+            helperText="Dùng để so sánh chi tiêu thực tế với kế hoạch."
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <AppInput 

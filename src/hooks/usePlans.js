@@ -50,8 +50,9 @@ export function usePlans() {
     setPlans(prev => prev.map(p =>
       p.id === planId ? { ...p, expenses: [...(p.expenses ?? []), res.planExpense], estimatedTotal: p.estimatedTotal + res.planExpense.estimatedAmount } : p
     ));
+    await fetch();
     return res.planExpense;
-  }, []);
+  }, [fetch]);
 
   const updatePlanExpense = useCallback(async (planId, planExpenseId, data) => {
     const res = await planApi.updatePlanExpense(planExpenseId, data);
@@ -62,8 +63,9 @@ export function usePlans() {
         estimatedTotal: p.expenses.reduce((sum, e) => sum + (e.id === planExpenseId ? res.planExpense.estimatedAmount : e.estimatedAmount), 0),
       } : p
     ));
+    await fetch();
     return res.planExpense;
-  }, []);
+  }, [fetch]);
 
   const deletePlanExpense = useCallback(async (planId, planExpenseId) => {
     await planApi.deletePlanExpense(planExpenseId);
@@ -74,7 +76,8 @@ export function usePlans() {
         estimatedTotal: p.expenses.filter(e => e.id !== planExpenseId).reduce((s, e) => s + e.estimatedAmount, 0),
       } : p
     ));
-  }, []);
+    await fetch();
+  }, [fetch]);
 
   const convertExpense = useCallback(async (planId, planExpenseId, data) => {
     const res = await planApi.convertExpense(planExpenseId, data);
@@ -85,8 +88,9 @@ export function usePlans() {
         expenses: p.expenses.map(e => e.id === planExpenseId ? { ...e, convertedToExpenseId: res.expense.id } : e),
       } : p
     ));
+    await fetch();
     return res;
-  }, []);
+  }, [fetch]);
 
   return {
     plans, loading, error, refetch: fetch,
