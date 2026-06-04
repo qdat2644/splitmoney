@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Download, Lock, Mail, Save, ShieldAlert, UserRound } from 'lucide-react';
+import { BarChart3, Bot, Download, Eye, Lock, Mail, Map, RotateCcw, Save, ShieldAlert, TrendingUp, UserRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { exportApi, userApi } from '../services/apiClient';
+import { useSidebarPreferences } from '../hooks/useSidebarPreferences';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
 import AppInput from '../components/ui/AppInput';
@@ -14,6 +15,7 @@ const MIN_PASSWORD_LENGTH = 8;
 export default function SettingsPage() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
+  const { prefs, updatePref, resetToDefaults } = useSidebarPreferences();
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profileError, setProfileError] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
@@ -111,6 +113,8 @@ export default function SettingsPage() {
         onChange={(field, value) => setPasswords((prev) => ({ ...prev, [field]: value }))}
         onSubmit={changePassword}
       />
+
+      <AppearanceSection prefs={prefs} onToggle={updatePref} onReset={resetToDefaults} />
 
       <DangerZone />
     </main>
@@ -218,6 +222,77 @@ function DataSection() {
   );
 }
 
+const VISIBILITY_OPTIONS = [
+  { key: 'showAnalytics', icon: BarChart3, label: 'Phân tích', description: 'Báo cáo phân tích chi tiêu cá nhân' },
+  { key: 'showForecasts', icon: TrendingUp, label: 'Dự báo', description: 'Dự báo tài chính dựa trên lịch sử chi tiêu' },
+  { key: 'showPlans', icon: Map, label: 'Kế hoạch', description: 'Lập kế hoạch ngân sách cho sự kiện, chuyến đi' },
+  { key: 'showCopilot', icon: Bot, label: 'Trợ lý AI', description: 'Tư vấn tài chính cá nhân bằng AI' },
+];
+
+function VisibilityToggle({ icon: Icon, label, description, enabled, onToggle }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-white/5 last:border-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${enabled ? 'border-blue-500/20 bg-blue-500/10' : 'border-white/5 bg-white/3'}`}>
+          <Icon className={`h-4 w-4 transition-colors ${enabled ? 'text-blue-300' : 'text-gray-500'}`} />
+        </div>
+        <div className="min-w-0">
+          <p className={`text-sm font-medium transition-colors ${enabled ? 'text-white' : 'text-gray-500'}`}>{label}</p>
+          <p className="text-xs text-gray-600 truncate">{description}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        onClick={onToggle}
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus:outline-none ${enabled ? 'bg-blue-500' : 'bg-white/10'}`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0'}`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function AppearanceSection({ prefs, onToggle, onReset }) {
+  const allDefault = VISIBILITY_OPTIONS.every((opt) => prefs[opt.key] === true);
+  return (
+    <AppCard className="border border-white/5 bg-dark-800 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <SectionHeader
+          icon={Eye}
+          title="Tùy chỉnh hiển thị"
+          description="Chọn các tính năng hiển thị trên thanh điều hướng bên trái. Các tính năng ẩn vẫn có thể truy cập qua URL."
+        />
+        {!allDefault && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/5 px-2.5 py-1.5 text-xs text-gray-400 transition-colors hover:border-white/10 hover:text-white"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Khôi phục mặc định
+          </button>
+        )}
+      </div>
+      <div className="mt-5">
+        {VISIBILITY_OPTIONS.map((opt) => (
+          <VisibilityToggle
+            key={opt.key}
+            icon={opt.icon}
+            label={opt.label}
+            description={opt.description}
+            enabled={prefs[opt.key]}
+            onToggle={() => onToggle(opt.key, !prefs[opt.key])}
+          />
+        ))}
+      </div>
+    </AppCard>
+  );
+}
+
 function DangerZone() {
   return (
     <AppCard className="border border-red-500/10 bg-dark-800 p-5">
@@ -240,6 +315,7 @@ function DangerZone() {
     </AppCard>
   );
 }
+
 
 function SectionHeader({ icon: Icon, title, description }) {
   return (

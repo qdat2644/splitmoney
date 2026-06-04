@@ -1,5 +1,5 @@
 // PlansPage.jsx — Planning Foundation UI (with plan expense CRUD + conversion)
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -81,7 +81,7 @@ function PlanExpenseRow({ expense, onDelete, onConvert, onEdit }) {
       <div className="flex items-center gap-1 shrink-0">
         {isConverted ? (
           <span className="flex items-center gap-1 text-xs text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
-            <Link2 className="w-3 h-3" /> Đã chuyển
+            <Link2 className="w-3 h-3" /> Đã đồng bộ
           </span>
         ) : (
           <>
@@ -95,7 +95,7 @@ function PlanExpenseRow({ expense, onDelete, onConvert, onEdit }) {
             <button
               onClick={() => onConvert(expense)}
               className="btn-icon w-7 h-7 text-blue-400/60 hover:text-blue-400 hover:bg-blue-500/10"
-              title="Chuyển thành khoản chi thực"
+              title="Đồng bộ sang phòng"
             >
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -117,8 +117,21 @@ function PlanExpenseRow({ expense, onDelete, onConvert, onEdit }) {
 function PlanTrackingPanel({ tracking }) {
   const safeTracking = tracking ?? buildFallbackTracking();
   const referenceAmount = safeTracking.targetBudgetAmount ?? safeTracking.plannedTotal;
-  const progressWidth = Math.min(100, Math.max(0, safeTracking.progressPercent || 0));
+  const rawPercent = safeTracking.progressPercent || 0;
+  const progressWidth = Math.min(100, Math.max(0, rawPercent));
   const status = TRACKING_STATUS[safeTracking.status] ?? TRACKING_STATUS.no_budget;
+
+  const percentLabel = referenceAmount > 0
+    ? rawPercent > 100
+      ? `${Math.round(rawPercent)}%`
+      : `${Math.round(rawPercent)}%`
+    : null;
+
+  const percentColor = safeTracking.status === 'over_budget'
+    ? 'text-red-400'
+    : safeTracking.status === 'near_limit'
+      ? 'text-amber-400'
+      : 'text-emerald-400';
 
   return (
     <AppCard variant="ghost" className="mx-4 mb-4 p-3">
@@ -128,9 +141,16 @@ function PlanTrackingPanel({ tracking }) {
             <p className="text-[11px] font-medium text-gray-500">Theo dõi ngân sách</p>
             <p className="text-xs text-gray-400">{formatTrackingVariance(safeTracking)}</p>
           </div>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${status.className}`}>
-            {status.label}
-          </span>
+          <div className="flex items-center gap-2">
+            {percentLabel && (
+              <span className={`text-sm font-bold tabular-nums ${percentColor}`}>
+                {safeTracking.status === 'over_budget' ? '⚠ ' : ''}{percentLabel}
+              </span>
+            )}
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${status.className}`}>
+              {status.label}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-xs">
@@ -139,16 +159,26 @@ function PlanTrackingPanel({ tracking }) {
           <Metric label="Còn lại" value={formatCurrency(safeTracking.remainingAmount, true)} tone={safeTracking.remainingAmount < 0 ? 'text-red-300' : 'text-emerald-300'} />
         </div>
 
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
-          <div
-            className={`h-full rounded-full ${safeTracking.status === 'over_budget' ? 'bg-red-400' : safeTracking.status === 'near_limit' ? 'bg-amber-400' : 'bg-emerald-400'}`}
-            style={{ width: `${progressWidth}%` }}
-          />
+        {/* Progress bar — label shows Tiến độ ngân sách */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-medium text-gray-500">Tiến độ ngân sách</p>
+            {percentLabel && (
+              <p className={`text-[10px] font-semibold tabular-nums ${percentColor}`}>{percentLabel}</p>
+            )}
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${safeTracking.status === 'over_budget' ? 'bg-red-400' : safeTracking.status === 'near_limit' ? 'bg-amber-400' : 'bg-emerald-400'}`}
+              style={{ width: `${progressWidth}%` }}
+            />
+          </div>
         </div>
       </div>
     </AppCard>
   );
 }
+
 
 function Metric({ label, value, tone = 'text-white' }) {
   return (
@@ -202,17 +232,98 @@ function buildFallbackTracking() {
     varianceAmount: 0,
     itemBreakdown: [],
     categoryBreakdown: [],
+    spendingCount: 0,
   };
 }
 
 function formatTrackingVariance(tracking) {
   if (!tracking.actualTotal) return 'Chưa có chi tiêu thực tế';
-  if (tracking.varianceAmount > 0) return `Vượt dự kiến ${formatCurrency(tracking.varianceAmount, true)}`;
-  if (tracking.varianceAmount < 0) return `Thấp hơn dự kiến ${formatCurrency(Math.abs(tracking.varianceAmount), true)}`;
-  return 'Đúng như dự kiến';
+  if (tracking.varianceAmount > 0) return `Vượt ngân sách ${formatCurrency(tracking.varianceAmount, true)}`;
+  if (tracking.varianceAmount < 0) return `Còn lại ${formatCurrency(Math.abs(tracking.varianceAmount), true)}`;
+  return 'Đúng ngân sách';
 }
 
-function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense, onDeleteExpense, onConvertExpense, onEditPlan }) {
+function PlanSpendingRow({ spending, expenses, onEdit, onDelete }) {
+  const linkedExpense = expenses.find((expense) => expense.id === spending.linkedPlanExpenseId);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 8 }}
+      className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-white/5 bg-emerald-500/5"
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="text-base">{CATEGORY_ICONS[spending.category] ?? CATEGORY_ICONS.other}</span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-white truncate">{spending.title}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-emerald-300">{formatCurrency(spending.amount, true)}</span>
+            {spending.category && <span className="text-xs text-gray-500">{spending.category}</span>}
+            {spending.spentAt && <span className="text-xs text-gray-500">{new Date(spending.spentAt).toLocaleDateString('vi-VN')}</span>}
+            {linkedExpense && <span className="text-xs text-blue-300 truncate max-w-[160px]">Gắn với {linkedExpense.title}</span>}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={() => onEdit(spending)}
+          className="btn-icon w-7 h-7 text-gray-400/70 hover:text-white hover:bg-white/10"
+          title="Chỉnh sửa chi tiêu"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => onDelete(spending.id)}
+          className="btn-icon w-7 h-7 text-red-400/50 hover:text-red-400 hover:bg-red-500/10"
+          title="Xoá chi tiêu"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function PlanSpendingSection({ plan, onAdd, onEdit, onDelete }) {
+  const spendings = plan.spendings ?? [];
+  const expenses = plan.expenses ?? [];
+
+  return (
+    <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/[0.03] p-3 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-semibold text-white">Chi tiêu thực tế</h4>
+          <p className="text-xs text-gray-500">{spendings.length} khoản đã ghi nhận trong kế hoạch</p>
+        </div>
+        <AppButton size="sm" variant="secondary" icon={Plus} onClick={() => onAdd(plan.id)}>
+          Thêm chi tiêu thực tế
+        </AppButton>
+      </div>
+
+      {spendings.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-white/10 px-3 py-3 text-xs text-gray-500">
+          Chưa có chi tiêu thực tế. Khi chuyến đi bắt đầu, hãy ghi lại khoản chi tại đây để so sánh với kế hoạch.
+        </p>
+      ) : (
+        <AnimatePresence mode="popLayout">
+          {spendings.map((spending) => (
+            <PlanSpendingRow
+              key={spending.id}
+              spending={spending}
+              expenses={expenses}
+              onEdit={(item) => onEdit(plan.id, item)}
+              onDelete={(id) => onDelete(plan.id, id)}
+            />
+          ))}
+        </AnimatePresence>
+      )}
+    </div>
+  );
+}
+
+function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense, onDeleteExpense, onConvertExpense, onEditPlan, onAddSpending, onEditSpending, onDeleteSpending }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = PLAN_STATUS_ICONS[plan.status] ?? Clock;
   const expenses = plan.expenses ?? [];
@@ -329,6 +440,13 @@ function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense,
                 </div>
               )}
 
+              <PlanSpendingSection
+                plan={plan}
+                onAdd={onAddSpending}
+                onEdit={onEditSpending}
+                onDelete={onDeleteSpending}
+              />
+
               <PlanVarianceTable tracking={tracking} />
 
               {/* Add expense button */}
@@ -346,6 +464,147 @@ function PlanCard({ plan, onDelete, onStatusChange, onAddExpense, onEditExpense,
     </motion.div>
   );
 }
+
+function PlanSpendingModal({ plan, spending, onClose, onSave }) {
+  const [linkedPlanExpenseId, setLinkedPlanExpenseId] = useState(spending?.linkedPlanExpenseId ?? '');
+  const [title, setTitle] = useState(spending?.title ?? '');
+  const [amount, setAmount] = useState(spending?.amount ?? '');
+  const [category, setCategory] = useState(spending?.category ?? 'other');
+  const [spentAt, setSpentAt] = useState(spending?.spentAt ? spending.spentAt.split('T')[0] : new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState(spending?.note ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Track manually-edited fields so autofill never overwrites user input
+  const isAddMode = !spending;
+  const userEdited = useRef({ title: !isAddMode, amount: !isAddMode, category: !isAddMode, note: !isAddMode });
+
+  // Autofill from linked planned item (add mode only, only unedited fields)
+  useEffect(() => {
+    if (!linkedPlanExpenseId || !isAddMode) return;
+    const linked = (plan.expenses ?? []).find((e) => e.id === linkedPlanExpenseId);
+    if (!linked) return;
+    if (!userEdited.current.title) setTitle(linked.title ?? '');
+    if (!userEdited.current.amount) setAmount(String(linked.estimatedAmount ?? ''));
+    if (!userEdited.current.category) setCategory(linked.category ?? 'other');
+    if (!userEdited.current.note && linked.note) setNote(linked.note);
+  }, [linkedPlanExpenseId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!title.trim()) {
+      setError('Vui lòng nhập tên khoản chi.');
+      return;
+    }
+    if (!Number(amount) || Number(amount) <= 0) {
+      setError('Số tiền phải lớn hơn 0.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await onSave({
+        title: title.trim(),
+        amount: Number(amount),
+        category: category || null,
+        spentAt: spentAt || undefined,
+        linkedPlanExpenseId: linkedPlanExpenseId || null,
+        note: note.trim() || null,
+      });
+    } catch (err) {
+      setError(err.message || 'Không thể lưu chi tiêu.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalLayout open onClose={onClose} size="md">
+      <ModalHeader title={spending ? 'Chỉnh sửa chi tiêu thực tế' : 'Thêm chi tiêu thực tế'} icon={Wallet} onClose={onClose} />
+      <form onSubmit={handleSubmit}>
+        <ModalBody className="space-y-4">
+          {error && <p className="text-sm text-red-300">{error}</p>}
+
+          {/* Linked planned item — placed first so autofill populates fields below */}
+          <div>
+            <AppSelect
+              label="Gắn với hạng mục dự kiến"
+              value={linkedPlanExpenseId}
+              onChange={(event) => setLinkedPlanExpenseId(event.target.value)}
+            >
+              <option value="">Không gắn</option>
+              {(plan.expenses ?? []).map((expense) => (
+                <option key={expense.id} value={expense.id}>{expense.title}</option>
+              ))}
+            </AppSelect>
+            {isAddMode && (
+              <p className="mt-1.5 text-xs text-gray-500">
+                Chọn hạng mục dự kiến để tự điền thông tin.
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-white/5" />
+
+          <AppInput
+            label="Tên khoản chi"
+            value={title}
+            onChange={(event) => {
+              userEdited.current.title = true;
+              setTitle(event.target.value);
+              if (event.target.value.trim()) setError('');
+            }}
+            placeholder="Ví dụ: Ăn trưa Mì Quảng"
+            required
+          />
+          <AppInput
+            label="Số tiền"
+            type="number"
+            min="1"
+            value={amount}
+            onChange={(event) => {
+              userEdited.current.amount = true;
+              setAmount(event.target.value);
+            }}
+            required
+          />
+          <AppSelect
+            label="Danh mục"
+            value={category}
+            onChange={(event) => {
+              userEdited.current.category = true;
+              setCategory(event.target.value);
+            }}
+          >
+            {Object.keys(CATEGORY_ICONS).map((key) => (
+              <option key={key} value={key}>{CATEGORY_ICONS[key]} {key}</option>
+            ))}
+          </AppSelect>
+          <AppInput
+            label="Ngày chi"
+            type="date"
+            value={spentAt}
+            onChange={(event) => setSpentAt(event.target.value)}
+          />
+          <AppInput
+            label="Ghi chú"
+            value={note}
+            onChange={(event) => {
+              userEdited.current.note = true;
+              setNote(event.target.value);
+            }}
+            placeholder="Không bắt buộc"
+          />
+        </ModalBody>
+        <ModalFooter>
+          <AppButton type="button" variant="secondary" onClick={onClose}>Hủy</AppButton>
+          <AppButton type="submit" loading={saving}>Lưu chi tiêu</AppButton>
+        </ModalFooter>
+      </form>
+    </ModalLayout>
+  );
+}
+
 
 // ── Create Plan Modal ─────────────────────────────────────────────────────────
 import PlanParticipantsInput from '../components/plans/PlanParticipantsInput';
@@ -464,13 +723,19 @@ import ContextualCopilotPanel from '../components/copilot/ContextualCopilotPanel
 export default function PlansPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { plans, loading, error, refetch, createPlan, updatePlan, updatePlanParticipants, deletePlan, addPlanExpense, updatePlanExpense, deletePlanExpense, convertExpense } = usePlans();
+  const {
+    plans, loading, error, refetch,
+    createPlan, updatePlan, updatePlanParticipants, deletePlan,
+    addPlanExpense, updatePlanExpense, deletePlanExpense, convertExpense,
+    addPlanSpending, updatePlanSpending, deletePlanSpending,
+  } = usePlans();
   const { rooms, toast } = useApp();
   const confirm = useConfirm();
 
   const [showCreate, setShowCreate]             = useState(false);
   const [editingPlan, setEditingPlan]           = useState(null);
   const [expModalState, setExpModalState]       = useState({ planId: null, expense: null });
+  const [spendingModalState, setSpendingModalState] = useState({ planId: null, spending: null });
   const [convertTarget, setConvertTarget]       = useState(null); // { planId, expense }
   
   const [showAIPanel, setShowAIPanel]           = useState(false);
@@ -595,11 +860,36 @@ export default function PlansPage() {
     }
   };
 
+  const handleAddSpending = (planId) => setSpendingModalState({ planId, spending: null });
+  const handleEditSpending = (planId, spending) => setSpendingModalState({ planId, spending });
+
+  const handleSavePlanSpending = async (data) => {
+    if (!spendingModalState.planId) return;
+    if (spendingModalState.spending) {
+      await updatePlanSpending(spendingModalState.planId, spendingModalState.spending.id, data);
+      toast.success('Đã cập nhật chi tiêu thực tế');
+    } else {
+      await addPlanSpending(spendingModalState.planId, data);
+      toast.success('Đã thêm chi tiêu thực tế');
+    }
+    setSpendingModalState({ planId: null, spending: null });
+  };
+
+  const handleDeletePlanSpending = async (planId, spendingId) => {
+    if (!await confirm({ title: 'Xoá chi tiêu thực tế?', message: 'Thao tác này không thể hoàn tác.' })) return;
+    try {
+      await deletePlanSpending(planId, spendingId);
+      toast.success('Đã xoá chi tiêu thực tế');
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
   const handleConvertExpense = (planId, expense) => setConvertTarget({ planId, expense });
 
   const handleDoConvert = async (planExpenseId, convertData) => {
     const res = await convertExpense(convertTarget.planId, planExpenseId, convertData);
-    toast.success('Chi phí kế hoạch đã trở thành khoản chi thực tế.');
+    toast.success('Đã đồng bộ mục kế hoạch sang phòng.');
     toast.info('Phòng, công nợ và thanh toán đề xuất đã cập nhật.');
     setConvertTarget(null);
     return res;
@@ -689,6 +979,9 @@ export default function PlansPage() {
                         onDeleteExpense={handleDeletePlanExpense}
                         onConvertExpense={handleConvertExpense}
                         onEditPlan={setEditingPlan}
+                        onAddSpending={handleAddSpending}
+                        onEditSpending={handleEditSpending}
+                        onDeleteSpending={handleDeletePlanSpending}
                       />
                     ))}
                   </AnimatePresence>
@@ -710,6 +1003,9 @@ export default function PlansPage() {
                         onDeleteExpense={handleDeletePlanExpense}
                         onConvertExpense={handleConvertExpense}
                         onEditPlan={setEditingPlan}
+                        onAddSpending={handleAddSpending}
+                        onEditSpending={handleEditSpending}
+                        onDeleteSpending={handleDeletePlanSpending}
                       />
                     ))}
                   </AnimatePresence>
@@ -731,6 +1027,9 @@ export default function PlansPage() {
                         onDeleteExpense={handleDeletePlanExpense}
                         onConvertExpense={handleConvertExpense}
                         onEditPlan={setEditingPlan}
+                        onAddSpending={handleAddSpending}
+                        onEditSpending={handleEditSpending}
+                        onDeleteSpending={handleDeletePlanSpending}
                       />
                     ))}
                   </AnimatePresence>
@@ -758,6 +1057,15 @@ export default function PlansPage() {
           name: participant.user?.name ?? participant.guestMember?.displayName ?? participant.displayName ?? 'Participant',
         }))}
       />
+
+      {spendingModalState.planId && (
+        <PlanSpendingModal
+          plan={plans.find((plan) => plan.id === spendingModalState.planId) ?? { expenses: [] }}
+          spending={spendingModalState.spending}
+          onClose={() => setSpendingModalState({ planId: null, spending: null })}
+          onSave={handleSavePlanSpending}
+        />
+      )}
 
       <ConvertExpenseModal
         open={!!convertTarget}

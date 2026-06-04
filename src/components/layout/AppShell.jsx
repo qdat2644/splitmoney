@@ -12,7 +12,7 @@ export default function AppShell({ children, topBarTitle, topBarActions, mode = 
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}

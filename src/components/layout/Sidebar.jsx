@@ -7,6 +7,7 @@ import {
   TrendingUp, Users, Wallet, X, Shield,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useSidebarPreferences } from '../../hooks/useSidebarPreferences';
 
 function NavItem({ item, onClick, mode }) {
   return (
@@ -50,6 +51,7 @@ function NavSection({ title, items, onClose, mode }) {
 
 export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
   const { stats, members, currentRoom, currentUser } = useApp();
+  const { prefs } = useSidebarPreferences();
   const roomId = currentRoom?.roomId || 'local';
   const location = useLocation();
 
@@ -74,8 +76,8 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
     {
       title: 'Tiền bạc',
       items: [
-        { to: '/analytics', icon: BarChart3, label: 'Phân tích' },
-        { to: '/forecasts', icon: TrendingUp, label: 'Dự báo' },
+        ...(prefs.showAnalytics ? [{ to: '/analytics', icon: BarChart3, label: 'Phân tích' }] : []),
+        ...(prefs.showForecasts ? [{ to: '/forecasts', icon: TrendingUp, label: 'Dự báo' }] : []),
         { to: '/budget', icon: PiggyBank, label: 'Ngân sách' },
       ],
     },
@@ -88,13 +90,13 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
     {
       title: 'Kế hoạch',
       items: [
-        { to: '/plans', icon: Map, label: 'Kế hoạch' },
+        ...(prefs.showPlans ? [{ to: '/plans', icon: Map, label: 'Kế hoạch' }] : []),
       ],
     },
     {
       title: 'AI',
       items: [
-        { to: '/copilot', icon: Bot, label: 'Trợ lý AI' },
+        ...(prefs.showCopilot ? [{ to: '/copilot', icon: Bot, label: 'Trợ lý AI' }] : []),
       ],
     },
     {
@@ -173,7 +175,7 @@ export default function Sidebar({ mobileOpen, onClose, mode = 'room' }) {
 
   return (
     <>
-      <aside data-testid="app-sidebar" className="hidden h-screen w-56 shrink-0 lg:flex lg:flex-col">
+      <aside data-testid="app-sidebar" className="hidden h-screen w-56 shrink-0 sticky top-0 lg:flex lg:flex-col">
         {content}
       </aside>
       <div className={`lg:hidden ${mobileOpen ? '' : 'pointer-events-none'}`}>

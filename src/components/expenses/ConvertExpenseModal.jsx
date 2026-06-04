@@ -88,7 +88,7 @@ export default function ConvertExpenseModal({ open, onClose, planExpense, rooms,
   return (
     <ModalLayout open={open} onClose={handleClose} size="md">
       <ModalHeader 
-        title="Chuyển thành khoản chi thực" 
+        title="Đồng bộ sang phòng" 
         subtitle={planExpense?.title} 
         icon={ArrowRight} 
         onClose={handleClose} 
@@ -103,9 +103,9 @@ export default function ConvertExpenseModal({ open, onClose, planExpense, rooms,
           >
             <CheckCircle className="w-14 h-14 text-emerald-400" />
             <div>
-              <p className="text-white font-bold text-lg">Đã chuyển thành công!</p>
+              <p className="text-white font-bold text-lg">Đã đồng bộ sang phòng!</p>
               <p className="text-gray-400 text-sm mt-1">
-                Khoản chi <span className="text-white font-medium">"{planExpense?.title}"</span> đã được tạo.
+                Khoản chi <span className="text-white font-medium">"{planExpense?.title}"</span> đã được tạo trong phòng.
               </p>
             </div>
             {resultExpId && (
@@ -257,7 +257,7 @@ export default function ConvertExpenseModal({ open, onClose, planExpense, rooms,
                   icon={ArrowRight}
                   className="w-full sm:w-auto"
                 >
-                  Tạo khoản chi
+                  Đồng bộ sang phòng
                 </AppButton>
               </>
             )}

@@ -10,10 +10,7 @@ export async function listPlans(userId) {
         { room: { members: { some: { userId, status: 'approved' } } } },
       ],
     },
-    include: {
-      participants: { include: { user: { select: { id: true, name: true } }, guestMember: true } },
-      expenses: true,
-    },
+    include: planInclude,
     orderBy: { createdAt: 'desc' },
   });
 
@@ -180,6 +177,44 @@ export async function deletePlanExpense(planExpenseId, userId) {
   return { success: true };
 }
 
+export async function listPlanSpendings(planId, userId) {
+  await assertPlanMember(planId, userId);
+  return prisma.planSpending.findMany({
+    where: { planId },
+    include: { linkedPlanExpense: true },
+    orderBy: { spentAt: 'desc' },
+  });
+}
+
+export async function addPlanSpending(planId, userId, body) {
+  await assertPlanMember(planId, userId);
+  const data = await normalizePlanSpendingInput(planId, body);
+  return prisma.planSpending.create({
+    data: { planId, ...data },
+    include: { linkedPlanExpense: true },
+  });
+}
+
+export async function updatePlanSpending(planId, spendingId, userId, body) {
+  await assertPlanMember(planId, userId);
+  const existing = await prisma.planSpending.findUnique({ where: { id: spendingId } });
+  if (!existing || existing.planId !== planId) throw httpError('Khong tim thay chi tieu thuc te.', 404);
+  const data = await normalizePlanSpendingInput(planId, body, existing);
+  return prisma.planSpending.update({
+    where: { id: spendingId },
+    data,
+    include: { linkedPlanExpense: true },
+  });
+}
+
+export async function deletePlanSpending(planId, spendingId, userId) {
+  await assertPlanMember(planId, userId);
+  const existing = await prisma.planSpending.findUnique({ where: { id: spendingId } });
+  if (!existing || existing.planId !== planId) throw httpError('Khong tim thay chi tieu thuc te.', 404);
+  await prisma.planSpending.delete({ where: { id: spendingId } });
+  return { success: true };
+}
+
 export async function convertPlanExpenseToReal(planExpenseId, userId, { roomId, paidByUserId, paidByGuestMemberId, date, participantMapping }) {
   const pe = await prisma.planExpense.findUnique({ where: { id: planExpenseId } });
   if (!pe) throw httpError('Khong tim thay muc ke hoach.', 404);
@@ -235,14 +270,16 @@ export async function convertPlanExpenseToReal(planExpenseId, userId, { roomId, 
   return { expense, planExpense: pe };
 }
 
-export function buildPlanTrackingSummary(plan, actualExpenses = []) {
+export function buildPlanTrackingSummary(plan, roomActualExpenses = []) {
   const plannedExpenses = plan.expenses ?? [];
+  const planSpendings = plan.spendings ?? [];
   const targetBudgetAmount = normalizeNumberOrNull(plan.targetBudgetAmount);
   const plannedTotal = plannedExpenses.reduce((sum, expense) => sum + normalizeAmount(expense.estimatedAmount), 0);
-  const uniqueActualExpenses = Array.from(new Map(
-    actualExpenses.filter(Boolean).map((expense) => [expense.id, expense])
+  const uniqueRoomActualExpenses = Array.from(new Map(
+    roomActualExpenses.filter(Boolean).map((expense) => [expense.id, expense])
   ).values());
-  const actualTotal = uniqueActualExpenses.reduce((sum, expense) => sum + normalizeAmount(expense.amount), 0);
+  const actualSpendings = planSpendings.length > 0 ? planSpendings : uniqueRoomActualExpenses;
+  const actualTotal = actualSpendings.reduce((sum, expense) => sum + normalizeAmount(expense.amount), 0);
   const budgetReference = targetBudgetAmount ?? plannedTotal;
   const hasBudgetReference = budgetReference > 0;
   const remainingAmount = hasBudgetReference ? budgetReference - actualTotal : 0;
@@ -265,7 +302,7 @@ export function buildPlanTrackingSummary(plan, actualExpenses = []) {
   }
 
   const actualByCategory = new Map();
-  for (const expense of uniqueActualExpenses) {
+  for (const expense of actualSpendings) {
     const category = expense.category || 'other';
     actualByCategory.set(category, (actualByCategory.get(category) || 0) + normalizeAmount(expense.amount));
   }
@@ -286,9 +323,10 @@ export function buildPlanTrackingSummary(plan, actualExpenses = []) {
     });
 
   const itemBreakdown = plannedExpenses.map((plannedExpense) => {
-    const itemActualTotal = uniqueActualExpenses
+    const itemActualTotal = actualSpendings
       .filter((expense) =>
-        expense.sourcePlanExpenseId === plannedExpense.id
+        expense.linkedPlanExpenseId === plannedExpense.id
+        || expense.sourcePlanExpenseId === plannedExpense.id
         || (plannedExpense.convertedToExpenseId && expense.id === plannedExpense.convertedToExpenseId)
       )
       .reduce((sum, expense) => sum + normalizeAmount(expense.amount), 0);
@@ -317,13 +355,15 @@ export function buildPlanTrackingSummary(plan, actualExpenses = []) {
     variancePercent,
     categoryBreakdown,
     itemBreakdown,
-    linkedExpenseCount: uniqueActualExpenses.length,
+    spendingCount: planSpendings.length,
+    linkedExpenseCount: uniqueRoomActualExpenses.length,
   };
 }
 
 const planInclude = {
   participants: { include: { user: { select: { id: true, name: true } }, guestMember: true } },
   expenses: true,
+  spendings: { include: { linkedPlanExpense: true }, orderBy: { spentAt: 'desc' } },
 };
 
 async function withTrackingSummary(plan) {
@@ -441,6 +481,38 @@ function normalizeOptionalMoney(value, label) {
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount < 0) throw httpError(`${label} khong hop le.`, 400);
   return amount;
+}
+
+async function normalizePlanSpendingInput(planId, body, existing = null) {
+  const title = body.title !== undefined ? String(body.title || '').trim() : existing?.title;
+  if (!title) throw httpError('Ten chi tieu thuc te khong duoc de trong.', 400);
+
+  const amount = body.amount !== undefined ? Number(body.amount) : existing?.amount;
+  if (!Number.isFinite(amount) || amount <= 0) throw httpError('So tien chi tieu thuc te phai lon hon 0.', 400);
+
+  let linkedPlanExpenseId = existing?.linkedPlanExpenseId ?? null;
+  if (body.linkedPlanExpenseId !== undefined) {
+    linkedPlanExpenseId = body.linkedPlanExpenseId || null;
+  }
+  if (linkedPlanExpenseId) {
+    const planExpense = await prisma.planExpense.findUnique({ where: { id: linkedPlanExpenseId } });
+    if (!planExpense || planExpense.planId !== planId) {
+      throw httpError('Hang muc du kien khong thuoc ke hoach nay.', 400);
+    }
+  }
+
+  const spentAtValue = body.spentAt !== undefined ? body.spentAt : existing?.spentAt;
+  const spentAt = spentAtValue ? new Date(spentAtValue) : new Date();
+  if (Number.isNaN(spentAt.getTime())) throw httpError('Ngay chi khong hop le.', 400);
+
+  return {
+    title,
+    amount,
+    category: body.category !== undefined ? body.category || null : existing?.category ?? null,
+    spentAt,
+    note: body.note !== undefined ? body.note || null : existing?.note ?? null,
+    linkedPlanExpenseId,
+  };
 }
 
 function normalizeNumberOrNull(value) {

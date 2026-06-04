@@ -126,6 +126,10 @@ export const planApi = {
   updatePlanExpense: (planExpenseId, data) => apiClient(`/plans/expenses/${planExpenseId}`, { method: 'PATCH', body: data }),
   deletePlanExpense: (planExpenseId)    => apiClient(`/plans/expenses/${planExpenseId}`, { method: 'DELETE' }),
   convertExpense:(planExpenseId, data)  => apiClient(`/plans/expenses/${planExpenseId}/convert`, { body: data }),
+  getPlanSpendings: (planId)            => apiClient(`/plans/${planId}/spendings`),
+  addPlanSpending: (planId, data)       => apiClient(`/plans/${planId}/spendings`, { body: data }),
+  updatePlanSpending: (planId, spendingId, data) => apiClient(`/plans/${planId}/spendings/${spendingId}`, { method: 'PATCH', body: data }),
+  deletePlanSpending: (planId, spendingId) => apiClient(`/plans/${planId}/spendings/${spendingId}`, { method: 'DELETE' }),
   generateAIPlan: (data)                 => apiClient('/plans/ai/generate', { body: data }),
 };
 

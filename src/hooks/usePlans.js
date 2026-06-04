@@ -92,9 +92,27 @@ export function usePlans() {
     return res;
   }, [fetch]);
 
+  const addPlanSpending = useCallback(async (planId, data) => {
+    const res = await planApi.addPlanSpending(planId, data);
+    await fetch();
+    return res.spending;
+  }, [fetch]);
+
+  const updatePlanSpending = useCallback(async (planId, spendingId, data) => {
+    const res = await planApi.updatePlanSpending(planId, spendingId, data);
+    await fetch();
+    return res.spending;
+  }, [fetch]);
+
+  const deletePlanSpending = useCallback(async (planId, spendingId) => {
+    await planApi.deletePlanSpending(planId, spendingId);
+    await fetch();
+  }, [fetch]);
+
   return {
     plans, loading, error, refetch: fetch,
     createPlan, updatePlan, updatePlanParticipants, deletePlan,
     addPlanExpense, updatePlanExpense, deletePlanExpense, convertExpense,
+    addPlanSpending, updatePlanSpending, deletePlanSpending,
   };
 }

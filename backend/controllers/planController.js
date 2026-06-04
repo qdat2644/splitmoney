@@ -8,6 +8,10 @@ import {
   deletePlanExpense,
   convertPlanExpenseToReal,
   updatePlanParticipants,
+  listPlanSpendings,
+  addPlanSpending,
+  updatePlanSpending,
+  deletePlanSpending,
 } from '../services/planningService.js';
 import { generatePlanWithAI } from '../services/ai/planGenerator.js';
 import { invalidateProfileCache, getOrRefreshProfile } from '../services/intelligence/personalFinanceProfileService.js';
@@ -78,6 +82,38 @@ export const removePlanExpense = async (req, res) => {
 export const patchPlanExpense = async (req, res) => {
   try {
     res.json({ planExpense: await updatePlanExpense(req.params.planExpenseId, req.user.userId, req.body) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+export const getPlanSpendings = async (req, res) => {
+  try {
+    res.json({ spendings: await listPlanSpendings(req.params.planId, req.user.userId) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+export const postPlanSpending = async (req, res) => {
+  try {
+    res.status(201).json({ spending: await addPlanSpending(req.params.planId, req.user.userId, req.body) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+export const patchPlanSpending = async (req, res) => {
+  try {
+    res.json({ spending: await updatePlanSpending(req.params.planId, req.params.spendingId, req.user.userId, req.body) });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+export const removePlanSpending = async (req, res) => {
+  try {
+    res.json(await deletePlanSpending(req.params.planId, req.params.spendingId, req.user.userId));
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }

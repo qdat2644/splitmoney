@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getPlans, postPlan, patchPlan, removePlan,
   postPlanExpense, patchPlanExpense, removePlanExpense, convertPlanExpense, patchPlanParticipants,
+  getPlanSpendings, postPlanSpending, patchPlanSpending, removePlanSpending,
 } from '../controllers/planController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
@@ -14,6 +15,12 @@ router.post('/',                                 postPlan);      // POST /api/pl
 router.patch('/:planId',                         patchPlan);     // PATCH /api/plans/:planId
 router.patch('/:planId/participants',            patchPlanParticipants);
 router.delete('/:planId',                        removePlan);    // DELETE /api/plans/:planId
+
+// Plan-native actual spending
+router.get('/:planId/spendings',                         getPlanSpendings);
+router.post('/:planId/spendings',                        postPlanSpending);
+router.patch('/:planId/spendings/:spendingId',           patchPlanSpending);
+router.delete('/:planId/spendings/:spendingId',          removePlanSpending);
 
 // Plan expenses
 router.post('/:planId/expenses',                 postPlanExpense);    // POST /api/plans/:planId/expenses
